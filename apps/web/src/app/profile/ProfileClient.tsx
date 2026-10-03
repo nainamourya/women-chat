@@ -9,21 +9,28 @@ export type Interest = {
 
 const MAX_INTERESTS = 15;
 const MAX_BIO_LENGTH = 500;
+const MAX_DISPLAY_NAME_LENGTH = 50;
 
 export function ProfileClient({
+  initialDisplayName,
   initialBio,
   initialSelectedIds,
+  initialProfileComplete,
   catalog,
 }: {
+  initialDisplayName: string;
   initialBio: string;
   initialSelectedIds: string[];
+  initialProfileComplete: boolean;
   catalog: Interest[];
 }) {
+  const [displayName, setDisplayName] = useState(initialDisplayName);
   const [bio, setBio] = useState(initialBio);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set(initialSelectedIds));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [profileComplete, setProfileComplete] = useState(initialProfileComplete);
 
   function toggleInterest(id: string) {
     setSaved(false);
@@ -48,7 +55,10 @@ export function ProfileClient({
         fetch("/api/profile", {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ bio: bio.trim() === "" ? null : bio }),
+          body: JSON.stringify({
+            ...(displayName.trim() === "" ? {} : { displayName: displayName.trim() }),
+            bio: bio.trim() === "" ? null : bio,
+          }),
         }),
         fetch("/api/profile/interests", {
           method: "PUT",
@@ -67,6 +77,8 @@ export function ProfileClient({
         return;
       }
 
+      const profileData = await profileRes.json();
+      setProfileComplete(Boolean(profileData.profile?.profileComplete));
       setSaved(true);
     } catch {
       setError("Something went wrong. Please try again.");
@@ -77,6 +89,27 @@ export function ProfileClient({
 
   return (
     <div className="flex flex-col gap-6">
+      {profileComplete && (
+        <p className="rounded-md bg-green-50 px-3 py-2 text-sm text-green-700 dark:bg-green-950 dark:text-green-300">
+          Your profile is complete.
+        </p>
+      )}
+
+      <label className="flex flex-col gap-1 text-sm">
+        Display name
+        <input
+          type="text"
+          value={displayName}
+          maxLength={MAX_DISPLAY_NAME_LENGTH}
+          onChange={(e) => {
+            setSaved(false);
+            setDisplayName(e.target.value);
+          }}
+          placeholder="What should we call you?"
+          className="rounded-md border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+        />
+      </label>
+
       <label className="flex flex-col gap-1 text-sm">
         About you
         <textarea

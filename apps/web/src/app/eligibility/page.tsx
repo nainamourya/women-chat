@@ -7,6 +7,9 @@ export default async function EligibilityPage() {
   if (!session?.user) {
     redirect("/login");
   }
+  if (!session.user.ageConfirmed18) {
+    redirect("/confirm-age");
+  }
 
   return (
     <main className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center px-6 py-16">

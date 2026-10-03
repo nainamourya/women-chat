@@ -15,7 +15,7 @@ export class AuthError extends Error {
 }
 
 export function toPublicUser(user: User) {
-  const { passwordHash, verificationRef, ...publicUser } = user;
+  const { passwordHash, verificationRef, googleId, ...publicUser } = user;
   return publicUser;
 }
 
@@ -58,7 +58,9 @@ export async function verifyCredentials(email: string, password: string) {
   const user = await db.query.users.findFirst({
     where: eq(users.email, email.toLowerCase()),
   });
-  if (!user) {
+  // Accounts created via Google sign-in have no password set — reject them
+  // the same way as a wrong password rather than letting bcrypt.compare throw.
+  if (!user || !user.passwordHash) {
     throw new AuthError("Invalid email or password.", 401);
   }
 
@@ -72,4 +74,70 @@ export async function verifyCredentials(email: string, password: string) {
   }
 
   return toPublicUser(user);
+}
+
+/**
+ * Finds an existing user by email to link a Google account to, or creates a
+ * new one. Never stores a password or any Google token — only the OIDC
+ * `sub` (as `googleId`) so a repeat Google sign-in is recognized. A Google
+ * account created/linked this way starts as `unverified` and with
+ * `ageConfirmed18: false`, exactly like a brand-new credentials signup —
+ * Google sign-in itself confers no eligibility/age verification.
+ */
+export async function findOrCreateGoogleUser(input: {
+  email: string;
+  googleId: string;
+  displayName: string;
+}) {
+  const email = input.email.toLowerCase();
+  const existing = await db.query.users.findFirst({ where: eq(users.email, email) });
+
+  if (existing) {
+    if (existing.isBanned) {
+      throw new AuthError("This account has been suspended.", 403);
+    }
+    if (existing.googleId === input.googleId) {
+      return toPublicUser(existing);
+    }
+    const [linked] = await db
+      .update(users)
+      .set({ googleId: input.googleId, updatedAt: new Date() })
+      .where(eq(users.id, existing.id))
+      .returning();
+    return toPublicUser(linked);
+  }
+
+  const [created] = await db
+    .insert(users)
+    .values({
+      email,
+      passwordHash: null,
+      displayName: input.displayName || "New user",
+      googleId: input.googleId,
+      ageConfirmed18: false,
+      verificationStatus: "unverified",
+    })
+    .returning();
+
+  return toPublicUser(created);
+}
+
+/**
+ * Self-attestation checkbox equivalent for accounts that never went through
+ * the signup form (e.g. Google sign-in). Only ever flips `false` -> `true`
+ * for the session's own user id; never used as, or combined with, real age
+ * or identity verification.
+ */
+export async function confirmAge18(userId: string) {
+  const [updated] = await db
+    .update(users)
+    .set({ ageConfirmed18: true, updatedAt: new Date() })
+    .where(eq(users.id, userId))
+    .returning();
+
+  if (!updated) {
+    throw new AuthError("User not found.", 404);
+  }
+
+  return toPublicUser(updated);
 }

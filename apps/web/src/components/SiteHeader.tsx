@@ -17,6 +17,7 @@ export function SiteHeader() {
             <>
               <Link href="/profile">Profile</Link>
               <Link href="/eligibility">Eligibility</Link>
+              <Link href="/match">Find someone</Link>
               <button
                 onClick={() => signOut({ callbackUrl: "/" })}
                 className="cursor-pointer text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"

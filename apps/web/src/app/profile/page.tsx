@@ -3,8 +3,10 @@ import { auth } from "@/lib/auth";
 import { ProfileClient, type Interest } from "./ProfileClient";
 
 type ProfileData = {
+  displayName: string | null;
   bio: string | null;
   interests: Interest[];
+  profileComplete: boolean;
 };
 
 async function fetchProfile(userId: string): Promise<ProfileData> {
@@ -30,6 +32,9 @@ export default async function ProfilePage() {
   if (!session?.user) {
     redirect("/login");
   }
+  if (!session.user.ageConfirmed18) {
+    redirect("/confirm-age");
+  }
 
   const [profile, catalog] = await Promise.all([
     fetchProfile(session.user.id),
@@ -41,12 +46,15 @@ export default async function ProfilePage() {
       <h1 className="mb-1 text-2xl font-semibold">Your profile</h1>
       <p className="mb-6 text-sm text-zinc-600 dark:text-zinc-400">
         This is <strong>private</strong> — only you can see it. It&apos;s not
-        a public profile and won&apos;t be shown to other users here.
+        a public profile and won&apos;t be shown to other users here. It&apos;s
+        used only for matching and chat context later on.
       </p>
 
       <ProfileClient
+        initialDisplayName={profile.displayName ?? ""}
         initialBio={profile.bio ?? ""}
         initialSelectedIds={profile.interests.map((i) => i.id)}
+        initialProfileComplete={profile.profileComplete}
         catalog={catalog}
       />
     </main>

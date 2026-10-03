@@ -32,6 +32,7 @@ profileRouter.get("/:userId", async (req, res) => {
 
 const upsertProfileSchema = z.object({
   bio: z.string().max(500, "Bio must be 500 characters or fewer.").nullable().optional(),
+  displayName: z.string().min(2).max(50).optional(),
 });
 
 profileRouter.put("/:userId", async (req, res) => {

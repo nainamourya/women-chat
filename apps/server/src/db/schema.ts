@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, boolean, timestamp, pgEnum, primaryKey } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, boolean, timestamp, pgEnum, primaryKey, index } from "drizzle-orm/pg-core";
 
 // Vendor-agnostic verification status. MVP sets this via a manual/stub flow only.
 // A real third-party provider (Persona, Veriff, etc.) will later populate the same
@@ -15,8 +15,15 @@ export const userRoleEnum = pgEnum("user_role", ["user", "admin"]);
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
   email: text("email").notNull().unique(),
-  passwordHash: text("password_hash").notNull(),
+  // Nullable: accounts created via Google sign-in have no password. Never
+  // set/read for such accounts — credentials login rejects them explicitly.
+  passwordHash: text("password_hash"),
   displayName: text("display_name").notNull(),
+
+  // Google account identifier (OIDC `sub`), used only to find/link an
+  // existing account by email and to recognize repeat Google sign-ins. Never
+  // used as an authentication secret. No Google tokens are stored.
+  googleId: text("google_id").unique(),
 
   // 18+ self-attestation captured at signup. Not a substitute for real age verification.
   ageConfirmed18: boolean("age_confirmed_18").notNull().default(false),
@@ -81,3 +88,48 @@ export const userInterests = pgTable(
   },
   (table) => [primaryKey({ columns: [table.userId, table.interestId] })],
 );
+
+export const matchStatusEnum = pgEnum("match_status", ["active", "ended"]);
+
+// A single 1:1 matchmaking session between two users. The live matchmaking
+// queue itself lives in Redis (see matchmaking.service.ts) — this table is
+// only the durable record of a match once two users are actually paired, and
+// is the source of truth for "is this user already in an active match".
+export const matches = pgTable("matches", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userAId: uuid("user_a_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  userBId: uuid("user_b_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  status: matchStatusEnum("status").notNull().default("active"),
+
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  endedAt: timestamp("ended_at", { withTimezone: true }),
+});
+
+export type Match = typeof matches.$inferSelect;
+
+// Chat messages for an active (or previously active) match. Intentionally
+// stores only the sender's id, not any denormalized profile/display data —
+// readers join against `users`/`userProfiles` if a display name is ever
+// needed, so nothing stale or sensitive is duplicated into each row.
+export const messages = pgTable(
+  "messages",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    matchId: uuid("match_id")
+      .notNull()
+      .references(() => matches.id, { onDelete: "cascade" }),
+    senderId: uuid("sender_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    content: text("content").notNull(),
+
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("messages_match_id_created_at_idx").on(table.matchId, table.createdAt)],
+);
+
+export type ChatMessage = typeof messages.$inferSelect;

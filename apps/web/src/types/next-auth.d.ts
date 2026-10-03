@@ -8,6 +8,7 @@ declare module "next-auth" {
       id: string;
       verificationStatus: VerificationStatus;
       role: "user" | "admin";
+      ageConfirmed18: boolean;
     } & DefaultSession["user"];
   }
 
@@ -16,6 +17,7 @@ declare module "next-auth" {
     displayName: string;
     verificationStatus: VerificationStatus;
     role: "user" | "admin";
+    ageConfirmed18: boolean;
   }
 }
 
@@ -26,5 +28,6 @@ declare module "@auth/core/jwt" {
     id: string;
     verificationStatus: VerificationStatus;
     role: "user" | "admin";
+    ageConfirmed18: boolean;
   }
 }
