@@ -1,7 +1,10 @@
 import type { Server as HttpServer } from "node:http";
 import { Server as SocketIOServer, type Socket } from "socket.io";
 import { z } from "zod";
+import { eq } from "drizzle-orm";
 import { env } from "../config/env.js";
+import { db } from "../db/client.js";
+import { users } from "../db/schema.js";
 import { consumeSocketTicket } from "../redis/socketTickets.js";
 import {
   assertActiveParticipant,
@@ -11,7 +14,7 @@ import {
   getRecentMessages,
   sendMessage,
 } from "../services/chat.service.js";
-import { AuthError } from "../services/auth.service.js";
+import { AuthError, assertAccountActive } from "../services/auth.service.js";
 
 let io: SocketIOServer | undefined;
 
@@ -198,6 +201,20 @@ export function initSocketServer(httpServer: HttpServer): SocketIOServer {
     if (!userId) {
       return next(new Error("Unauthorized"));
     }
+
+    // Server-side enforcement for banned/suspended accounts: a rejected
+    // connection can never join chat/call rooms, regardless of what the
+    // client UI does or doesn't hide.
+    try {
+      const user = await db.query.users.findFirst({ where: eq(users.id, userId) });
+      if (!user) {
+        return next(new Error("Unauthorized"));
+      }
+      assertAccountActive(user);
+    } catch {
+      return next(new Error("Unauthorized"));
+    }
+
     socket.data.userId = userId;
     next();
   });
@@ -236,4 +253,14 @@ export function getIO(): SocketIOServer {
 
 export function emitToUser(userId: string, event: string, payload: unknown): void {
   getIO().to(`user:${userId}`).emit(event, payload);
+}
+
+// Forcibly drops any active connection for this user — used when an admin
+// suspends/bans them, so an in-progress chat/call ends immediately rather
+// than waiting for their next reconnect attempt (which io.use already
+// rejects for a non-active account). No new client-facing event/payload is
+// introduced; the client just sees an ordinary disconnect, the same as any
+// network drop.
+export function disconnectUser(userId: string): void {
+  getIO().in(`user:${userId}`).disconnectSockets(true);
 }

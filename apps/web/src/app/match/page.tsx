@@ -2,6 +2,10 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { MatchClient } from "./MatchClient";
+import { Card } from "@/components/ui/Card";
+import { Badge } from "@/components/ui/Badge";
+import { Alert } from "@/components/ui/Alert";
+import { Mascot } from "@/components/Mascot";
 
 async function fetchProfileComplete(userId: string): Promise<boolean> {
   const res = await fetch(`${process.env.SERVER_URL}/api/profile/${userId}`, {
@@ -26,49 +30,38 @@ export default async function MatchPage() {
 
   return (
     <main className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center px-6 py-16">
-      <h1 className="mb-1 text-2xl font-semibold">Find someone to chat with</h1>
-      <p className="mb-6 text-sm text-zinc-600 dark:text-zinc-400">
+      <Mascot mood="wave" size="sm" className="mb-3 self-start" />
+      <h1 className="mb-1 text-2xl font-semibold text-foreground">Find someone to chat with</h1>
+      <p className="mb-6 text-sm text-muted">
         You&apos;ll be randomly paired with another eligible user for a
         private text chat.
       </p>
 
-      <div className="mb-6 flex flex-col gap-2 text-sm">
-        <div className="flex items-center justify-between rounded-md border border-zinc-200 px-3 py-2 dark:border-zinc-800">
-          <span>Eligibility verification</span>
-          <span
-            className={
-              eligible
-                ? "text-green-700 dark:text-green-400"
-                : "text-amber-700 dark:text-amber-400"
-            }
-          >
+      <Card className="mb-6 flex flex-col gap-2 p-4 text-sm">
+        <div className="flex items-center justify-between">
+          <span className="text-foreground">Eligibility verification</span>
+          <Badge variant={eligible ? "success" : "warning"}>
             {eligible ? "Verified" : "Not verified"}
-          </span>
+          </Badge>
         </div>
-        <div className="flex items-center justify-between rounded-md border border-zinc-200 px-3 py-2 dark:border-zinc-800">
-          <span>Profile</span>
-          <span
-            className={
-              profileComplete
-                ? "text-green-700 dark:text-green-400"
-                : "text-amber-700 dark:text-amber-400"
-            }
-          >
+        <div className="flex items-center justify-between">
+          <span className="text-foreground">Profile</span>
+          <Badge variant={profileComplete ? "success" : "warning"}>
             {profileComplete ? "Complete" : "Incomplete"}
-          </span>
+          </Badge>
         </div>
-      </div>
+      </Card>
 
       {eligible ? (
         <MatchClient />
       ) : (
-        <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+        <Alert variant="warning">
           Complete{" "}
           <Link href="/eligibility" className="underline">
             eligibility verification
           </Link>{" "}
           before matchmaking.
-        </p>
+        </Alert>
       )}
     </main>
   );

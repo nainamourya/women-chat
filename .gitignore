@@ -4,6 +4,10 @@ dist/
 out/
 build/
 
+# Local-disk prototype storage for user-submitted report evidence images —
+# never committed, see apps/server/src/services/evidenceStorage.ts
+apps/server/uploads/
+
 .env
 .env.local
 .env.*.local

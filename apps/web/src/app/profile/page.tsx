@@ -1,12 +1,15 @@
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
-import { ProfileClient, type Interest } from "./ProfileClient";
+import { ProfileTabs } from "./ProfileTabs";
+import type { Interest } from "./ProfileClient";
 
 type ProfileData = {
   displayName: string | null;
   bio: string | null;
   interests: Interest[];
   profileComplete: boolean;
+  createdAt: string | null;
 };
 
 async function fetchProfile(userId: string): Promise<ProfileData> {
@@ -42,21 +45,29 @@ export default async function ProfilePage() {
   ]);
 
   return (
-    <main className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center px-6 py-16">
-      <h1 className="mb-1 text-2xl font-semibold">Your profile</h1>
-      <p className="mb-6 text-sm text-zinc-600 dark:text-zinc-400">
-        This is <strong>private</strong> — only you can see it. It&apos;s not
+    <main className="mx-auto flex w-full max-w-xl flex-1 flex-col justify-center px-6 py-16">
+      <h1 className="mb-1 text-2xl font-semibold text-foreground">Your profile</h1>
+      <p className="mb-6 text-sm text-muted">
+        This is <strong className="text-foreground">private</strong> — only you can see it. It&apos;s not
         a public profile and won&apos;t be shown to other users here. It&apos;s
         used only for matching and chat context later on.
       </p>
 
-      <ProfileClient
-        initialDisplayName={profile.displayName ?? ""}
-        initialBio={profile.bio ?? ""}
-        initialSelectedIds={profile.interests.map((i) => i.id)}
-        initialProfileComplete={profile.profileComplete}
-        catalog={catalog}
-      />
+      <Suspense fallback={null}>
+        <ProfileTabs
+          initialDisplayName={profile.displayName ?? ""}
+          initialBio={profile.bio ?? ""}
+          initialSelectedIds={profile.interests.map((i) => i.id)}
+          initialProfileComplete={profile.profileComplete}
+          catalog={catalog}
+          email={session.user.email ?? ""}
+          verificationStatus={session.user.verificationStatus}
+          accountStatus={session.user.accountStatus}
+          suspendedUntil={session.user.suspendedUntil}
+          ageConfirmed18={session.user.ageConfirmed18}
+          createdAt={profile.createdAt}
+        />
+      </Suspense>
     </main>
   );
 }

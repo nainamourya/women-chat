@@ -1,6 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { Card } from "@/components/ui/Card";
+import { Input, Textarea } from "@/components/ui/Input";
+import { Button } from "@/components/ui/Button";
+import { Alert } from "@/components/ui/Alert";
 
 export type Interest = {
   id: string;
@@ -17,12 +21,14 @@ export function ProfileClient({
   initialSelectedIds,
   initialProfileComplete,
   catalog,
+  onDisplayNameSaved,
 }: {
   initialDisplayName: string;
   initialBio: string;
   initialSelectedIds: string[];
   initialProfileComplete: boolean;
   catalog: Interest[];
+  onDisplayNameSaved?: (name: string) => void;
 }) {
   const [displayName, setDisplayName] = useState(initialDisplayName);
   const [bio, setBio] = useState(initialBio);
@@ -80,6 +86,7 @@ export function ProfileClient({
       const profileData = await profileRes.json();
       setProfileComplete(Boolean(profileData.profile?.profileComplete));
       setSaved(true);
+      onDisplayNameSaved?.(displayName.trim() || initialDisplayName);
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {
@@ -88,48 +95,36 @@ export function ProfileClient({
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      {profileComplete && (
-        <p className="rounded-md bg-green-50 px-3 py-2 text-sm text-green-700 dark:bg-green-950 dark:text-green-300">
-          Your profile is complete.
-        </p>
-      )}
+    <Card className="flex flex-col gap-6 p-6">
+      {profileComplete && <Alert variant="success">Your profile is complete.</Alert>}
 
-      <label className="flex flex-col gap-1 text-sm">
-        Display name
-        <input
-          type="text"
-          value={displayName}
-          maxLength={MAX_DISPLAY_NAME_LENGTH}
-          onChange={(e) => {
-            setSaved(false);
-            setDisplayName(e.target.value);
-          }}
-          placeholder="What should we call you?"
-          className="rounded-md border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
-        />
-      </label>
+      <Input
+        label="Display name"
+        type="text"
+        value={displayName}
+        maxLength={MAX_DISPLAY_NAME_LENGTH}
+        onChange={(e) => {
+          setSaved(false);
+          setDisplayName(e.target.value);
+        }}
+        placeholder="What should we call you?"
+      />
 
-      <label className="flex flex-col gap-1 text-sm">
-        About you
-        <textarea
-          value={bio}
-          maxLength={MAX_BIO_LENGTH}
-          onChange={(e) => {
-            setSaved(false);
-            setBio(e.target.value);
-          }}
-          rows={4}
-          placeholder="Share a little about yourself…"
-          className="resize-none rounded-md border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
-        />
-        <span className="text-xs text-zinc-500">
-          {bio.length}/{MAX_BIO_LENGTH}
-        </span>
-      </label>
+      <Textarea
+        label="About you"
+        value={bio}
+        maxLength={MAX_BIO_LENGTH}
+        onChange={(e) => {
+          setSaved(false);
+          setBio(e.target.value);
+        }}
+        rows={4}
+        placeholder="Share a little about yourself…"
+        hint={`${bio.length}/${MAX_BIO_LENGTH}`}
+      />
 
       <div className="flex flex-col gap-2 text-sm">
-        <span className="font-medium">
+        <span className="font-medium text-foreground">
           Interests ({selectedIds.size}/{MAX_INTERESTS})
         </span>
         <div className="flex flex-wrap gap-2">
@@ -143,8 +138,8 @@ export function ProfileClient({
                 aria-pressed={isSelected}
                 className={
                   isSelected
-                    ? "rounded-full bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white dark:bg-white dark:text-zinc-900"
-                    : "rounded-full border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 dark:border-zinc-700 dark:text-zinc-300"
+                    ? "rounded-full bg-brand px-3 py-1.5 text-xs font-medium text-brand-foreground"
+                    : "rounded-full border border-border px-3 py-1.5 text-xs font-medium text-muted hover:bg-surface-hover"
                 }
               >
                 {interest.name}
@@ -154,26 +149,12 @@ export function ProfileClient({
         </div>
       </div>
 
-      {error && (
-        <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
-          {error}
-        </p>
-      )}
+      {error && <Alert variant="danger">{error}</Alert>}
+      {saved && !error && <Alert variant="success">Profile saved.</Alert>}
 
-      {saved && !error && (
-        <p className="rounded-md bg-green-50 px-3 py-2 text-sm text-green-700 dark:bg-green-950 dark:text-green-300">
-          Profile saved.
-        </p>
-      )}
-
-      <button
-        type="button"
-        onClick={handleSave}
-        disabled={saving}
-        className="self-start rounded-md bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white disabled:opacity-60 dark:bg-white dark:text-zinc-900"
-      >
+      <Button type="button" onClick={handleSave} disabled={saving} className="w-full">
         {saving ? "Saving…" : "Save profile"}
-      </button>
-    </div>
+      </Button>
+    </Card>
   );
 }

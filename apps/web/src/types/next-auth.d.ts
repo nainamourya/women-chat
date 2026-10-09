@@ -1,6 +1,7 @@
 import type { DefaultSession } from "next-auth";
 
 export type VerificationStatus = "unverified" | "pending" | "verified" | "rejected";
+export type AccountStatus = "active" | "suspended" | "banned";
 
 declare module "next-auth" {
   interface Session {
@@ -9,6 +10,8 @@ declare module "next-auth" {
       verificationStatus: VerificationStatus;
       role: "user" | "admin";
       ageConfirmed18: boolean;
+      accountStatus: AccountStatus;
+      suspendedUntil: string | null;
     } & DefaultSession["user"];
   }
 
@@ -18,6 +21,8 @@ declare module "next-auth" {
     verificationStatus: VerificationStatus;
     role: "user" | "admin";
     ageConfirmed18: boolean;
+    accountStatus: AccountStatus;
+    suspendedUntil: string | null;
   }
 }
 
@@ -29,5 +34,7 @@ declare module "@auth/core/jwt" {
     verificationStatus: VerificationStatus;
     role: "user" | "admin";
     ageConfirmed18: boolean;
+    accountStatus: AccountStatus;
+    suspendedUntil: string | null;
   }
 }

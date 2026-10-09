@@ -19,6 +19,39 @@ export function toPublicUser(user: User) {
   return publicUser;
 }
 
+// A suspension with a past `suspendedUntil` is treated as expired/active
+// again everywhere account status is checked, without a background job —
+// the next read that touches this user self-heals the status.
+function isCurrentlySuspended(user: Pick<User, "accountStatus" | "suspendedUntil">): boolean {
+  if (user.accountStatus !== "suspended") return false;
+  if (!user.suspendedUntil) return true;
+  return user.suspendedUntil.getTime() > Date.now();
+}
+
+export function assertAccountActive(user: Pick<User, "accountStatus" | "suspendedUntil">): void {
+  if (user.accountStatus === "banned") {
+    throw new AuthError("This account has been permanently banned.", 403);
+  }
+  if (isCurrentlySuspended(user)) {
+    const until = user.suspendedUntil
+      ? ` until ${user.suspendedUntil.toISOString().slice(0, 10)}`
+      : "";
+    throw new AuthError(`This account is suspended${until}.`, 403);
+  }
+}
+
+// Admin-gated endpoints always pass the acting user's *own* session id
+// (the same trust model as every other internal route — see
+// middleware/internalAuth.ts), then verify that user's role from the
+// database here rather than trusting a role flag supplied in the request.
+export async function assertAdmin(actingUserId: string) {
+  const user = await db.query.users.findFirst({ where: eq(users.id, actingUserId) });
+  if (!user || user.role !== "admin") {
+    throw new AuthError("Admin access required.", 403);
+  }
+  return user;
+}
+
 export async function registerUser(input: {
   email: string;
   password: string;
@@ -69,9 +102,7 @@ export async function verifyCredentials(email: string, password: string) {
     throw new AuthError("Invalid email or password.", 401);
   }
 
-  if (user.isBanned) {
-    throw new AuthError("This account has been suspended.", 403);
-  }
+  assertAccountActive(user);
 
   return toPublicUser(user);
 }
@@ -93,9 +124,7 @@ export async function findOrCreateGoogleUser(input: {
   const existing = await db.query.users.findFirst({ where: eq(users.email, email) });
 
   if (existing) {
-    if (existing.isBanned) {
-      throw new AuthError("This account has been suspended.", 403);
-    }
+    assertAccountActive(existing);
     if (existing.googleId === input.googleId) {
       return toPublicUser(existing);
     }

@@ -28,6 +28,7 @@ export async function getProfile(userId: string) {
     bio,
     interests: selectedInterests,
     profileComplete: isProfileComplete(bio, selectedInterests.length),
+    createdAt: user?.createdAt ?? null,
   };
 }
 

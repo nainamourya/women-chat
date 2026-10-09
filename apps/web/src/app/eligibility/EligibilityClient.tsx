@@ -2,6 +2,11 @@
 
 import { useState } from "react";
 import { useSession } from "next-auth/react";
+import { motion } from "framer-motion";
+import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+import { Badge } from "@/components/ui/Badge";
+import { Alert } from "@/components/ui/Alert";
 
 type VerificationStatus = "unverified" | "pending" | "verified" | "rejected";
 
@@ -10,6 +15,13 @@ const statusCopy: Record<VerificationStatus, string> = {
   pending: "Pending (prototype)",
   verified: "Passed (prototype)",
   rejected: "Rejected (prototype)",
+};
+
+const statusBadgeVariant: Record<VerificationStatus, "neutral" | "warning" | "success" | "danger"> = {
+  unverified: "neutral",
+  pending: "warning",
+  verified: "success",
+  rejected: "danger",
 };
 
 export function EligibilityClient({
@@ -42,27 +54,25 @@ export function EligibilityClient({
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="rounded-md border border-zinc-200 px-4 py-3 text-sm dark:border-zinc-800">
-        <span className="font-medium">Current status: </span>
-        {statusCopy[status]}
-      </div>
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, delay: 0.1, ease: "easeOut" }}
+    >
+      <Card className="flex flex-col gap-4 p-6">
+        <div className="flex items-center justify-between text-sm">
+          <span className="font-medium text-foreground">Current status</span>
+          <Badge variant={statusBadgeVariant[status]}>{statusCopy[status]}</Badge>
+        </div>
 
-      {status !== "verified" && (
-        <button
-          onClick={handleSimulate}
-          disabled={loading}
-          className="self-start rounded-md bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white disabled:opacity-60 dark:bg-white dark:text-zinc-900"
-        >
-          {loading ? "Running prototype check…" : "Run prototype eligibility check"}
-        </button>
-      )}
+        {status !== "verified" && (
+          <Button onClick={handleSimulate} disabled={loading} className="w-full">
+            {loading ? "Running prototype check…" : "Run prototype eligibility check"}
+          </Button>
+        )}
 
-      {error && (
-        <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
-          {error}
-        </p>
-      )}
-    </div>
+        {error && <Alert variant="danger">{error}</Alert>}
+      </Card>
+    </motion.div>
   );
 }

@@ -10,6 +10,9 @@ const envSchema = z.object({
   // Shared secret so the Next.js server (not the browser) can call trusted
   // internal endpoints. Rotate independently of NEXTAUTH_SECRET.
   INTERNAL_API_SECRET: z.string().min(16, "INTERNAL_API_SECRET must be at least 16 chars"),
+  // Local disk directory for report evidence uploads (prototype only — see
+  // evidenceStorage.ts for what production storage would need instead).
+  REPORT_EVIDENCE_DIR: z.string().default("./uploads/reports"),
 });
 
 const parsed = envSchema.safeParse(process.env);

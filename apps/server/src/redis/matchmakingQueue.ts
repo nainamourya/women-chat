@@ -11,6 +11,9 @@ const WAITING_TTL_SECONDS = 20;
 // Atomic so concurrent join requests (including two users joining at nearly
 // the same instant) can never claim the same waiting candidate twice, and a
 // user double-clicking "Find Someone" can never enqueue themselves twice.
+// Candidates in the caller's block list (either direction) are popped and
+// skipped rather than matched, then pushed back onto the queue so they are
+// not lost for other waiting users.
 // Returns:
 //   ["already_waiting"]
 //   ["matched", candidateUserId]
@@ -21,20 +24,42 @@ local userId = ARGV[1]
 local prefix = ARGV[2]
 local ttl = tonumber(ARGV[3])
 local selfKey = prefix .. userId
+local blockedCount = tonumber(ARGV[4])
+
+local blocked = {}
+for i = 1, blockedCount do
+  blocked[ARGV[4 + i]] = true
+end
 
 if redis.call('GET', selfKey) == 'waiting' then
   return {'already_waiting'}
 end
+
+local skipped = {}
+local matchedCandidate = nil
 
 while true do
   local candidate = redis.call('RPOP', queueKey)
   if not candidate then
     break
   end
-  if candidate ~= userId and redis.call('GET', prefix .. candidate) == 'waiting' then
+  if candidate == userId then
+    -- defensive: the selfKey check above already prevents this
+  elseif blocked[candidate] then
+    table.insert(skipped, candidate)
+  elseif redis.call('GET', prefix .. candidate) == 'waiting' then
     redis.call('DEL', prefix .. candidate)
-    return {'matched', candidate}
+    matchedCandidate = candidate
+    break
   end
+end
+
+for i = 1, #skipped do
+  redis.call('LPUSH', queueKey, skipped[i])
+end
+
+if matchedCandidate then
+  return {'matched', matchedCandidate}
 end
 
 redis.call('LPUSH', queueKey, userId)
@@ -47,7 +72,7 @@ export type JoinQueueResult =
   | { state: "matched"; candidateId: string }
   | { state: "waiting" };
 
-export async function joinQueue(userId: string): Promise<JoinQueueResult> {
+export async function joinQueue(userId: string, blockedIds: string[] = []): Promise<JoinQueueResult> {
   const result = (await redis.eval(
     JOIN_SCRIPT,
     1,
@@ -55,6 +80,8 @@ export async function joinQueue(userId: string): Promise<JoinQueueResult> {
     userId,
     STATUS_PREFIX,
     WAITING_TTL_SECONDS,
+    blockedIds.length,
+    ...blockedIds,
   )) as [string, string?];
 
   if (result[0] === "matched") {

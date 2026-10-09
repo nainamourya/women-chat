@@ -3,6 +3,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { motion } from "framer-motion";
+import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+import { Alert } from "@/components/ui/Alert";
 
 export function ConfirmAgeClient() {
   const router = useRouter();
@@ -37,34 +41,31 @@ export function ConfirmAgeClient() {
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <label className="flex items-start gap-2 text-sm">
-        <input
-          type="checkbox"
-          checked={checked}
-          onChange={(e) => setChecked(e.target.checked)}
-          className="mt-1"
-        />
-        <span>
-          I confirm that I am 18 years of age or older and identify as a
-          woman.
-        </span>
-      </label>
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, delay: 0.1, ease: "easeOut" }}
+    >
+      <Card className="flex flex-col gap-4 p-6">
+        <label className="flex items-start gap-2 text-sm text-foreground">
+          <input
+            type="checkbox"
+            checked={checked}
+            onChange={(e) => {
+              setChecked(e.target.checked);
+              setError(null);
+            }}
+            className="mt-1 accent-[var(--brand)]"
+          />
+          <span>I confirm that I am 18 years of age or older and identify as a woman.</span>
+        </label>
 
-      {error && (
-        <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
-          {error}
-        </p>
-      )}
+        {error && <Alert variant="danger">{error}</Alert>}
 
-      <button
-        type="button"
-        onClick={handleContinue}
-        disabled={submitting}
-        className="mt-2 self-start rounded-md bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white disabled:opacity-60 dark:bg-white dark:text-zinc-900"
-      >
-        {submitting ? "Continuing…" : "Continue"}
-      </button>
-    </div>
+        <Button type="button" onClick={handleContinue} disabled={submitting} className="mt-1 w-full">
+          {submitting ? "Continuing…" : "Continue"}
+        </Button>
+      </Card>
+    </motion.div>
   );
 }

@@ -50,20 +50,26 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const { user } = (await res.json()) as {
           user: {
             id: string;
+            email: string;
             displayName: string;
             verificationStatus: "unverified" | "pending" | "verified" | "rejected";
             role: "user" | "admin";
             ageConfirmed18: boolean;
+            accountStatus: "active" | "suspended" | "banned";
+            suspendedUntil: string | null;
           };
         };
 
         return {
           id: user.id,
+          email: user.email,
           name: user.displayName,
           displayName: user.displayName,
           verificationStatus: user.verificationStatus,
           role: user.role,
           ageConfirmed18: user.ageConfirmed18,
+          accountStatus: user.accountStatus,
+          suspendedUntil: user.suspendedUntil,
         };
       },
     }),
@@ -103,6 +109,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             verificationStatus: "unverified" | "pending" | "verified" | "rejected";
             role: "user" | "admin";
             ageConfirmed18: boolean;
+            accountStatus: "active" | "suspended" | "banned";
+            suspendedUntil: string | null;
           };
         };
 
@@ -115,6 +123,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         user.verificationStatus = internalUser.verificationStatus;
         user.role = internalUser.role;
         user.ageConfirmed18 = internalUser.ageConfirmed18;
+        user.accountStatus = internalUser.accountStatus;
+        user.suspendedUntil = internalUser.suspendedUntil;
 
         return true;
       } catch (err) {
@@ -128,6 +138,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.verificationStatus = user.verificationStatus;
         token.role = user.role;
         token.ageConfirmed18 = user.ageConfirmed18;
+        token.accountStatus = user.accountStatus;
+        token.suspendedUntil = user.suspendedUntil;
       }
       // Lets the client refresh a stale verificationStatus/ageConfirmed18
       // after the prototype eligibility/age-confirmation flow updates it,
@@ -145,6 +157,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       session.user.verificationStatus = token.verificationStatus;
       session.user.role = token.role;
       session.user.ageConfirmed18 = token.ageConfirmed18;
+      session.user.accountStatus = token.accountStatus;
+      session.user.suspendedUntil = token.suspendedUntil;
       return session;
     },
   },

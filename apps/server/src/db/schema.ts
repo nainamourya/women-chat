@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, boolean, timestamp, pgEnum, primaryKey, index } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, boolean, timestamp, pgEnum, primaryKey, index, unique } from "drizzle-orm/pg-core";
 
 // Vendor-agnostic verification status. MVP sets this via a manual/stub flow only.
 // A real third-party provider (Persona, Veriff, etc.) will later populate the same
@@ -11,6 +11,11 @@ export const verificationStatusEnum = pgEnum("verification_status", [
 ]);
 
 export const userRoleEnum = pgEnum("user_role", ["user", "admin"]);
+
+// Replaces the old boolean `isBanned` flag with a tri-state so a temporary
+// suspension (with an optional expiry) can be distinguished from a
+// permanent ban, per the moderation flow in reports.service.ts.
+export const accountStatusEnum = pgEnum("account_status", ["active", "suspended", "banned"]);
 
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -37,7 +42,10 @@ export const users = pgTable("users", {
   verificationRef: text("verification_ref"),
 
   role: userRoleEnum("role").notNull().default("user"),
-  isBanned: boolean("is_banned").notNull().default(false),
+  accountStatus: accountStatusEnum("account_status").notNull().default("active"),
+  // Only meaningful when accountStatus === "suspended". Null means an
+  // indefinite suspension (admin must manually reactivate).
+  suspendedUntil: timestamp("suspended_until", { withTimezone: true }),
 
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -133,3 +141,97 @@ export const messages = pgTable(
 );
 
 export type ChatMessage = typeof messages.$inferSelect;
+
+export const reportReasonEnum = pgEnum("report_reason", [
+  "harassment",
+  "sexual_inappropriate",
+  "not_eligible",
+  "fake_profile",
+  "spam_scam",
+  "threatening_unsafe",
+  "other",
+]);
+
+export const reportStatusEnum = pgEnum("report_status", [
+  "pending",
+  "under_review",
+  "resolved",
+  "dismissed",
+]);
+
+// The moderation outcome recorded on a report once an admin acts on it.
+// "none" until reviewed; does not itself change the reported user's
+// accountStatus — admins apply that separately via the same PATCH action
+// (see reports.service.ts), so this column stays an audit trail of what
+// was decided even if the account is later reactivated.
+export const reportActionEnum = pgEnum("report_action", ["none", "warn", "suspend", "ban"]);
+
+// User-submitted safety reports against another user, reviewed by an admin.
+// A report is only an allegation until reviewed — creating one never changes
+// the reported user's account status by itself.
+export const reports = pgTable(
+  "reports",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    reporterUserId: uuid("reporter_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    reportedUserId: uuid("reported_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    // The match this report was filed from, if any — gives admins chat
+    // context during review. Never cascaded: a report must outlive the
+    // match row it references.
+    matchId: uuid("match_id").references(() => matches.id),
+
+    reason: reportReasonEnum("reason").notNull(),
+    description: text("description"),
+
+    // Relative filename within the server's local evidence directory, e.g.
+    // "a1b2c3.jpg" — never a public URL. See reports.service.ts for the
+    // retention/access-control notes.
+    evidencePath: text("evidence_path"),
+    evidenceMimeType: text("evidence_mime_type"),
+
+    status: reportStatusEnum("status").notNull().default("pending"),
+    adminAction: reportActionEnum("admin_action").notNull().default("none"),
+    adminNote: text("admin_note"),
+
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+    reviewedBy: uuid("reviewed_by").references(() => users.id),
+  },
+  (table) => [
+    index("reports_status_idx").on(table.status),
+    index("reports_reported_user_id_idx").on(table.reportedUserId),
+    index("reports_created_at_idx").on(table.createdAt),
+  ],
+);
+
+export type Report = typeof reports.$inferSelect;
+export type NewReport = typeof reports.$inferInsert;
+
+// One-directional block record. Matchmaking exclusion is applied
+// bidirectionally (see matchmaking.service.ts) by checking both columns,
+// regardless of which user initiated the block.
+export const blocks = pgTable(
+  "blocks",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    blockerUserId: uuid("blocker_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    blockedUserId: uuid("blocked_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("blocks_blocker_user_id_idx").on(table.blockerUserId),
+    index("blocks_blocked_user_id_idx").on(table.blockedUserId),
+    unique("blocks_blocker_blocked_unique").on(table.blockerUserId, table.blockedUserId),
+  ],
+);
+
+export type Block = typeof blocks.$inferSelect;

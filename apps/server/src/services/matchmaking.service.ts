@@ -1,18 +1,17 @@
 import { and, eq, or } from "drizzle-orm";
 import { db } from "../db/client.js";
 import { matches, users } from "../db/schema.js";
-import { AuthError } from "./auth.service.js";
+import { AuthError, assertAccountActive } from "./auth.service.js";
 import { isWaiting, joinQueue, leaveQueue, refreshWaiting } from "../redis/matchmakingQueue.js";
 import { emitToUser } from "../socket/index.js";
+import { getBlockedCounterpartIds } from "./blocks.service.js";
 
 async function assertEligible(userId: string) {
   const user = await db.query.users.findFirst({ where: eq(users.id, userId) });
   if (!user) {
     throw new AuthError("User not found.", 404);
   }
-  if (user.isBanned) {
-    throw new AuthError("This account has been suspended.", 403);
-  }
+  assertAccountActive(user);
   if (!user.ageConfirmed18) {
     throw new AuthError("Age confirmation is required before matchmaking.", 403);
   }
@@ -50,7 +49,8 @@ export async function joinMatchmaking(userId: string): Promise<MatchmakingStatus
     return { state: "matched", matchId: existingMatch.id, otherUserId: otherUserId(existingMatch, userId) };
   }
 
-  const result = await joinQueue(userId);
+  const blockedIds = await getBlockedCounterpartIds(userId);
+  const result = await joinQueue(userId, blockedIds);
 
   if (result.state === "already_waiting") {
     return { state: "waiting" };
