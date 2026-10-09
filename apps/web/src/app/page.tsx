@@ -31,7 +31,7 @@ export default function Home() {
         </h1>
 
         <p className="max-w-xl text-base leading-relaxed text-muted">
-          JinGirl is an early MVP for peer-to-peer conversation between adult women
+          GiGirl is an early MVP for peer-to-peer conversation between adult women
           (18+) — not a dating app, not a content platform. Eligibility verification
           is currently a <strong className="text-foreground">prototype/test flow only</strong>,
           not a real identity or age check. Matching and chat features are still in

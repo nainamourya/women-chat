@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "JinGirl (prototype)",
+  title: "GiGirl (prototype)",
   description: "Women-only peer chat platform for adults 18+ — MVP prototype.",
 };
 

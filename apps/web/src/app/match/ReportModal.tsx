@@ -12,7 +12,7 @@ const ALLOWED_EVIDENCE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const REASONS: { value: string; label: string }[] = [
   { value: "harassment", label: "Harassment or bullying" },
   { value: "sexual_inappropriate", label: "Sexual or inappropriate behavior" },
-  { value: "not_eligible", label: "I believe this person is not eligible for JinGirl" },
+  { value: "not_eligible", label: "I believe this person is not eligible for GiGirl" },
   { value: "fake_profile", label: "Fake/misleading profile" },
   { value: "spam_scam", label: "Spam/scam" },
   { value: "threatening_unsafe", label: "Threatening or unsafe behavior" },
@@ -127,10 +127,10 @@ export function ReportModal({
   }
 
   return (
-    <Modal open={open} onClose={resetAndClose} title="Report this user" subtitle="Help us keep JinGirl safe.">
+    <Modal open={open} onClose={resetAndClose} title="Report this user" subtitle="Help us keep GiGirl safe.">
       {submitted ? (
         <div className="flex flex-col gap-4">
-          <Alert variant="success">Thanks for helping keep JinGirl safe. We&apos;ll review this report.</Alert>
+          <Alert variant="success">Thanks for helping keep GiGirl safe. We&apos;ll review this report.</Alert>
           <Button type="button" variant="secondary" onClick={resetAndClose}>
             Close
           </Button>

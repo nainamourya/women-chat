@@ -108,7 +108,7 @@ export function SiteHeader() {
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-x-4 px-5 py-3.5 sm:px-6">
           <Link href="/" className="flex items-center gap-2 font-semibold text-foreground">
             <LogoMark />
-            Jin<span className="text-brand">Girl</span>
+            Gi<span className="text-brand">Girl</span>
           </Link>
 
           <nav className="hidden items-center gap-x-5 text-sm text-foreground sm:flex">{links}</nav>

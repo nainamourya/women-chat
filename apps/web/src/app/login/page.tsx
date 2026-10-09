@@ -52,7 +52,7 @@ export default function LoginPage() {
       <FloatingDoodles />
       <Mascot mood="wave" size="sm" className="mb-3 self-start" />
       <h1 className="mb-1 text-2xl font-semibold text-foreground">Welcome back</h1>
-      <p className="mb-6 text-sm text-muted">Log in to continue to JinGirl.</p>
+      <p className="mb-6 text-sm text-muted">Log in to continue to GiGirl.</p>
 
       <Card className="flex flex-col gap-5 p-6">
         <Button

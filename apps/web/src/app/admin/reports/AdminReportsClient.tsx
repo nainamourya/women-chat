@@ -39,7 +39,7 @@ const TABS: { value: ReportStatus; label: string }[] = [
 const REASON_LABELS: Record<string, string> = {
   harassment: "Harassment or bullying",
   sexual_inappropriate: "Sexual or inappropriate behavior",
-  not_eligible: "Not eligible for JinGirl",
+  not_eligible: "Not eligible for GiGirl",
   fake_profile: "Fake/misleading profile",
   spam_scam: "Spam/scam",
   threatening_unsafe: "Threatening or unsafe behavior",
