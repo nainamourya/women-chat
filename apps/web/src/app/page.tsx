@@ -8,29 +8,29 @@ import { FloatingDoodles } from "@/components/FloatingDoodles";
 
 export default function Home() {
   return (
-    <main className="relative mx-auto flex w-full max-w-2xl flex-1 flex-col items-center justify-center gap-6 px-6 py-16 text-center sm:py-24">
+    <main className="relative mx-auto flex w-full max-w-2xl flex-1 flex-col items-center justify-center gap-3 px-6 py-6 text-center sm:gap-6 sm:py-24">
       <FloatingDoodles />
       <motion.div
         initial={{ opacity: 0, y: -10, scale: 0.85 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.5, ease: "easeOut" }}
       >
-        <Mascot mood="wave" size="lg" caption="Hey!" />
+        <Mascot mood="wave" size="md" caption="Hey!" className="sm:scale-125" />
       </motion.div>
 
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.15, ease: "easeOut" }}
-        className="flex flex-col items-center gap-5"
+        className="flex flex-col items-center gap-3 sm:gap-5"
       >
         <Badge variant="warning">Prototype — not yet available to the public</Badge>
 
-        <h1 className="text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
+        <h1 className="text-[1.75rem] font-semibold tracking-tight text-foreground sm:text-5xl">
           A women-only space <span className="text-brand">for real conversation</span>
         </h1>
 
-        <p className="max-w-xl text-base leading-relaxed text-muted">
+        <p className="max-w-xl text-sm leading-relaxed text-muted sm:text-base">
           GiGirl is an early MVP for peer-to-peer conversation between adult women
           (18+) — not a dating app, not a content platform. Eligibility verification
           is currently a <strong className="text-foreground">prototype/test flow only</strong>,
@@ -38,7 +38,7 @@ export default function Home() {
           development.
         </p>
 
-        <div className="flex flex-col items-center gap-3 sm:flex-row">
+        <div className="flex flex-col items-center gap-2 sm:flex-row sm:gap-3">
           <Link
             href="/signup"
             className="rounded-full bg-brand px-5 py-2.5 text-sm font-medium text-brand-foreground shadow-md transition-transform hover:-translate-y-0.5 hover:bg-brand-hover"
