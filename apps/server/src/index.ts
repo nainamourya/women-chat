@@ -9,6 +9,8 @@ import { interestsRouter } from "./routes/interests.js";
 import { matchmakingRouter } from "./routes/matchmaking.js";
 import { reportsRouter } from "./routes/reports.js";
 import { blocksRouter } from "./routes/blocks.js";
+import { adminUsersRouter } from "./routes/adminUsers.js";
+import { adminStatsRouter } from "./routes/adminStats.js";
 import { initSocketServer } from "./socket/index.js";
 import "./redis/client.js";
 
@@ -35,6 +37,8 @@ app.use("/api/interests", interestsRouter);
 app.use("/api/matchmaking", matchmakingRouter);
 app.use("/api/reports", reportsRouter);
 app.use("/api/blocks", blocksRouter);
+app.use("/api/admin/users", adminUsersRouter);
+app.use("/api/admin/stats", adminStatsRouter);
 
 const httpServer = createServer(app);
 

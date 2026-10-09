@@ -11,11 +11,11 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Admin access required." }, { status: 403 });
   }
 
-  const status = new URL(req.url).searchParams.get("status");
+  const search = new URL(req.url).searchParams.get("search");
   const query = new URLSearchParams({ adminUserId: session.user.id });
-  if (status) query.set("status", status);
+  if (search) query.set("search", search);
 
-  const res = await fetch(`${process.env.SERVER_URL}/api/reports?${query.toString()}`, {
+  const res = await fetch(`${process.env.SERVER_URL}/api/admin/users?${query.toString()}`, {
     headers: { "x-internal-api-secret": process.env.INTERNAL_API_SECRET! },
     cache: "no-store",
   });

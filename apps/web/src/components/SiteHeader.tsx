@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
 import { AnimatePresence, motion } from "framer-motion";
+import { isAllowedAdminEmail } from "@/lib/admin";
 
 function LogoMark() {
   return (
@@ -42,7 +43,7 @@ function HamburgerIcon({ open }: { open: boolean }) {
 }
 
 export function SiteHeader() {
-  const { status } = useSession();
+  const { data: session, status } = useSession();
   const [open, setOpen] = useState(false);
 
   const links =
@@ -60,6 +61,11 @@ export function SiteHeader() {
         <Link href="/match" className="hover:text-brand" onClick={() => setOpen(false)}>
           Find someone
         </Link>
+        {session?.user?.role === "admin" && isAllowedAdminEmail(session.user.email) && (
+          <Link href="/admin" className="hover:text-brand" onClick={() => setOpen(false)}>
+            Admin
+          </Link>
+        )}
         <button
           onClick={() => {
             setOpen(false);
