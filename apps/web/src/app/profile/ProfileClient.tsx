@@ -37,6 +37,7 @@ export function ProfileClient({
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [profileComplete, setProfileComplete] = useState(initialProfileComplete);
+  const [editing, setEditing] = useState(!initialProfileComplete);
 
   function toggleInterest(id: string) {
     setSaved(false);
@@ -84,14 +85,58 @@ export function ProfileClient({
       }
 
       const profileData = await profileRes.json();
-      setProfileComplete(Boolean(profileData.profile?.profileComplete));
+      const nowComplete = Boolean(profileData.profile?.profileComplete);
+      setProfileComplete(nowComplete);
       setSaved(true);
+      if (nowComplete) setEditing(false);
       onDisplayNameSaved?.(displayName.trim() || initialDisplayName);
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {
       setSaving(false);
     }
+  }
+
+  if (!editing) {
+    const selectedInterests = catalog.filter((interest) => selectedIds.has(interest.id));
+
+    return (
+      <Card className="flex flex-col gap-6 p-6">
+        {profileComplete && <Alert variant="success">Your profile is complete.</Alert>}
+
+        <div className="flex flex-col gap-1">
+          <span className="text-sm font-medium text-foreground">Display name</span>
+          <p className="text-sm text-muted">{displayName || "Not added yet"}</p>
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <span className="text-sm font-medium text-foreground">About you</span>
+          <p className="whitespace-pre-wrap text-sm text-muted">{bio || "Not added yet"}</p>
+        </div>
+
+        <div className="flex flex-col gap-2 text-sm">
+          <span className="font-medium text-foreground">Interests</span>
+          {selectedInterests.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {selectedInterests.map((interest) => (
+                <span
+                  key={interest.id}
+                  className="rounded-full bg-brand px-3 py-1.5 text-xs font-medium text-brand-foreground"
+                >
+                  {interest.name}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted">Not added yet</p>
+          )}
+        </div>
+
+        <Button type="button" onClick={() => setEditing(true)} className="w-full">
+          Edit profile
+        </Button>
+      </Card>
+    );
   }
 
   return (
@@ -152,9 +197,28 @@ export function ProfileClient({
       {error && <Alert variant="danger">{error}</Alert>}
       {saved && !error && <Alert variant="success">Profile saved.</Alert>}
 
-      <Button type="button" onClick={handleSave} disabled={saving} className="w-full">
-        {saving ? "Saving…" : "Save profile"}
-      </Button>
+      <div className="flex gap-3">
+        {profileComplete && (
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => {
+              setDisplayName(initialDisplayName);
+              setBio(initialBio);
+              setSelectedIds(new Set(initialSelectedIds));
+              setError(null);
+              setSaved(false);
+              setEditing(false);
+            }}
+            className="w-full"
+          >
+            Cancel
+          </Button>
+        )}
+        <Button type="button" onClick={handleSave} disabled={saving} className="w-full">
+          {saving ? "Saving…" : "Save profile"}
+        </Button>
+      </div>
     </Card>
   );
 }

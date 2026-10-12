@@ -1,20 +1,22 @@
 @import "tailwindcss";
 
 :root {
-  --background: #fbf8ff;
-  --foreground: #241b33;
+  --background: #fdf2f8;
+  --foreground: #2e1a47;
   --surface: #ffffff;
-  --surface-hover: #f4eefc;
-  --border: #e7ddf5;
+  --surface-hover: #fce7f3;
+  --border: #f3d9ec;
 
-  --muted: #786a8c;
+  --muted: #8a7396;
 
-  --brand: #7c3aed;
-  --brand-hover: #6d28d9;
+  --brand: #6b21a8;
+  --brand-hover: #581c87;
   --brand-foreground: #ffffff;
 
   --accent: #ec4899;
   --accent-bg: #fce7f3;
+
+  --brand-gradient: linear-gradient(135deg, #6b21a8 0%, #c026a3 50%, #ec4899 100%);
 
   --success: #16a34a;
   --success-bg: #effcf3;
@@ -47,6 +49,7 @@
   --color-brand: var(--brand);
   --color-brand-hover: var(--brand-hover);
   --color-brand-foreground: var(--brand-foreground);
+  --color-brand-gradient: var(--brand-gradient);
   --color-accent: var(--accent);
   --color-accent-bg: var(--accent-bg);
 
