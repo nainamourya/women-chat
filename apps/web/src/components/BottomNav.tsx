@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { isAllowedAdminEmail } from "@/lib/admin";
+import { useIsAdmin } from "@/lib/useIsAdmin";
 
 function HomeIcon({ className }: { className?: string }) {
   return (
@@ -69,9 +69,11 @@ function NavItem({ href, label, icon: Icon, active }: { href: string; label: str
 export function BottomNav() {
   const { data: session, status } = useSession();
   const pathname = usePathname();
+  // Called unconditionally (rules of hooks) even though its result is only
+  // used after the early return below.
+  const isAdmin = useIsAdmin();
 
   if (status !== "authenticated" || !session) return null;
-  const isAdmin = session.user.role === "admin" && isAllowedAdminEmail(session.user.email);
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-surface/95 backdrop-blur-md sm:hidden">
