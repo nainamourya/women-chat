@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { useIsAdmin } from "@/lib/useIsAdmin";
 
 function HomeIcon({ className }: { className?: string }) {
   return (
@@ -41,19 +40,6 @@ function FindSomeoneIcon({ className }: { className?: string }) {
   );
 }
 
-function AdminIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
-      <path
-        d="M12 3l7 3v5c0 4.4-3 8.2-7 9.5-4-1.3-7-5.1-7-9.5V6l7-3z"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
 function NavItem({ href, label, icon: Icon, active }: { href: string; label: string; icon: typeof HomeIcon; active: boolean }) {
   return (
     <Link
@@ -69,9 +55,6 @@ function NavItem({ href, label, icon: Icon, active }: { href: string; label: str
 export function BottomNav() {
   const { data: session, status } = useSession();
   const pathname = usePathname();
-  // Called unconditionally (rules of hooks) even though its result is only
-  // used after the early return below.
-  const isAdmin = useIsAdmin();
 
   if (status !== "authenticated" || !session) return null;
 
@@ -79,7 +62,6 @@ export function BottomNav() {
     <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-surface/95 backdrop-blur-md sm:hidden">
       <div className="mx-auto flex max-w-3xl items-end justify-around px-2 pb-2 pt-1.5">
         <NavItem href="/" label="Home" icon={HomeIcon} active={pathname === "/"} />
-        <NavItem href="/eligibility" label="Eligibility" icon={EligibilityIcon} active={pathname === "/eligibility"} />
 
         <Link href="/match" className="-mt-5 flex flex-col items-center gap-1">
           <span
@@ -91,11 +73,7 @@ export function BottomNav() {
           <span className={`text-[11px] ${pathname === "/match" ? "text-brand" : "text-muted"}`}>Find someone</span>
         </Link>
 
-        {isAdmin ? (
-          <NavItem href="/admin" label="Admin" icon={AdminIcon} active={pathname === "/admin"} />
-        ) : (
-          <span className="w-10" aria-hidden="true" />
-        )}
+        <NavItem href="/eligibility" label="Eligibility" icon={EligibilityIcon} active={pathname === "/eligibility"} />
       </div>
     </nav>
   );

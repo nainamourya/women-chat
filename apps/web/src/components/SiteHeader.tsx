@@ -4,11 +4,9 @@ import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { Logo } from "./Logo";
 import { AccountMenu } from "./AccountMenu";
-import { useIsAdmin } from "@/lib/useIsAdmin";
 
 export function SiteHeader() {
   const { data: session, status } = useSession();
-  const isAdmin = useIsAdmin();
 
   return (
     <header className="sticky top-0 z-20 border-b border-border bg-surface/80 backdrop-blur-md">
@@ -26,11 +24,6 @@ export function SiteHeader() {
               <Link href="/match" className="hover:text-brand">
                 Find someone
               </Link>
-              {isAdmin && (
-                <Link href="/admin" className="hover:text-brand">
-                  Admin
-                </Link>
-              )}
             </nav>
             <AccountMenu session={session} />
           </div>

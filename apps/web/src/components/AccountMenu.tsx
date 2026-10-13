@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { Session } from "next-auth";
 import { signOut } from "next-auth/react";
 import { AnimatePresence, motion } from "framer-motion";
+import { useIsAdmin } from "@/lib/useIsAdmin";
 
 function SettingsIcon({ className }: { className?: string }) {
   return (
@@ -25,6 +26,19 @@ function ProfileIcon({ className }: { className?: string }) {
     <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
       <circle cx="12" cy="8.5" r="3.5" stroke="currentColor" strokeWidth="1.6" />
       <path d="M4.5 20c1.2-4 4-6 7.5-6s6.3 2 7.5 6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function AdminIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+      <path
+        d="M12 3l7 3v5c0 4.4-3 8.2-7 9.5-4-1.3-7-5.1-7-9.5V6l7-3z"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
@@ -65,6 +79,7 @@ function MenuLink({
 export function AccountMenu({ session }: { session: Session }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
+  const isAdmin = useIsAdmin();
 
   useEffect(() => {
     function handlePointerDown(event: PointerEvent) {
@@ -123,6 +138,11 @@ export function AccountMenu({ session }: { session: Session }) {
               <MenuLink href="/profile" icon={<ProfileIcon className="h-4 w-4" />} onClick={close}>
                 Profile
               </MenuLink>
+              {isAdmin && (
+                <MenuLink href="/admin" icon={<AdminIcon className="h-4 w-4" />} onClick={close}>
+                  Admin
+                </MenuLink>
+              )}
               <button
                 type="button"
                 onClick={() => {
