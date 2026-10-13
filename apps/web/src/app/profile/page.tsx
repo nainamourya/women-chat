@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { ProfileTabs } from "./ProfileTabs";
 import type { Interest } from "./ProfileClient";
+import type { AccountStatus, VerificationStatus } from "@/types/next-auth";
 
 type ProfileData = {
   displayName: string | null;
@@ -10,6 +11,12 @@ type ProfileData = {
   interests: Interest[];
   profileComplete: boolean;
   createdAt: string | null;
+  email: string | null;
+  role: "user" | "admin";
+  verificationStatus: VerificationStatus;
+  accountStatus: AccountStatus;
+  suspendedUntil: string | null;
+  ageConfirmed18: boolean;
 };
 
 async function fetchProfile(userId: string): Promise<ProfileData> {
@@ -60,11 +67,11 @@ export default async function ProfilePage() {
           initialSelectedIds={profile.interests.map((i) => i.id)}
           initialProfileComplete={profile.profileComplete}
           catalog={catalog}
-          email={session.user.email ?? ""}
-          verificationStatus={session.user.verificationStatus}
-          accountStatus={session.user.accountStatus}
-          suspendedUntil={session.user.suspendedUntil}
-          ageConfirmed18={session.user.ageConfirmed18}
+          email={profile.email ?? session.user.email ?? ""}
+          verificationStatus={profile.verificationStatus}
+          accountStatus={profile.accountStatus}
+          suspendedUntil={profile.suspendedUntil}
+          ageConfirmed18={profile.ageConfirmed18}
           createdAt={profile.createdAt}
         />
       </Suspense>

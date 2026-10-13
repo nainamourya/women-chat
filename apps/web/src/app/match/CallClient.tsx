@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Socket } from "socket.io-client";
 import { AnimatePresence, motion } from "framer-motion";
 import { Badge } from "@/components/ui/Badge";
@@ -9,10 +9,17 @@ import { Avatar } from "@/components/ui/Avatar";
 
 type CallPhase = "idle" | "calling" | "ringing" | "active";
 
-// Free public STUN only — no TURN server, by design (see Phase 6 report).
-// This means calls between two peers who are both behind a restrictive/
-// symmetric NAT or firewall may fail to establish a direct connection.
-const ICE_SERVERS: RTCIceServer[] = [{ urls: "stun:stun.l.google.com:19302" }];
+// Used until /api/call/ice-servers resolves (or if it fails) — STUN alone
+// still works for peers on permissive networks, it just can't relay media
+// across strict NATs/firewalls the way a TURN server can.
+const FALLBACK_ICE_SERVERS: RTCIceServer[] = [{ urls: "stun:stun.l.google.com:19302" }];
+
+// Testing-only: forces every candidate pair through the TURN relay so you
+// can confirm the TURN server itself works, isolated from any direct/STUN
+// path. Never set this in normal production traffic — it adds relay latency
+// and load for every call. Safe to expose: it's a mode name, not a secret.
+const ICE_TRANSPORT_POLICY: RTCIceTransportPolicy | undefined =
+  process.env.NEXT_PUBLIC_ICE_TRANSPORT_POLICY === "relay" ? "relay" : undefined;
 
 type OfferPayload = { sdp: RTCSessionDescriptionInit; from: string };
 type AnswerPayload = { sdp: RTCSessionDescriptionInit; from: string };
@@ -114,18 +121,75 @@ export function CallClient({
   // the draggable bubble's dragConstraints ref is never null when it mounts.
   const constraintsRef = useRef<HTMLDivElement>(null);
 
-  function cleanupCall() {
+  // Populated by /api/call/ice-servers on mount; createPeerConnection() reads
+  // the ref directly so a call started before the fetch resolves still works
+  // (just without a TURN relay) rather than waiting on it.
+  const iceServersRef = useRef<RTCIceServer[]>(FALLBACK_ICE_SERVERS);
+  const turnConfiguredRef = useRef(false);
+  // Guards against retrying restartIce() in a loop for the same failure.
+  const iceRestartAttemptedRef = useRef(false);
+  const failTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearFailTimeout = useCallback(() => {
+    if (failTimeoutRef.current) {
+      clearTimeout(failTimeoutRef.current);
+      failTimeoutRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/call/ice-servers", { method: "POST" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (cancelled || !Array.isArray(data?.iceServers) || data.iceServers.length === 0) return;
+        iceServersRef.current = data.iceServers;
+        turnConfiguredRef.current = Boolean(data.turnConfigured);
+        if (!data.turnConfigured) {
+          console.warn("[call] No TURN server configured — calls across strict NATs/firewalls may fail.");
+        }
+      })
+      .catch(() => {
+        console.warn("[call] Failed to fetch ICE server configuration — falling back to STUN-only.");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Diagnostics only: logs which candidate type (host/srflx/relay) the
+  // active connection ended up using — no IPs, ports, or SDP content.
+  async function logSelectedCandidatePair(pc: RTCPeerConnection) {
+    try {
+      const stats = await pc.getStats();
+      const reports = Array.from(stats.values()) as Array<Record<string, unknown>>;
+      const pair = reports.find((report) => report.type === "candidate-pair" && report.state === "succeeded");
+      if (!pair) return;
+      const local = stats.get(pair.localCandidateId as string) as Record<string, unknown> | undefined;
+      const remote = stats.get(pair.remoteCandidateId as string) as Record<string, unknown> | undefined;
+      console.log("[call] ICE connected", {
+        localCandidateType: local?.candidateType,
+        remoteCandidateType: remote?.candidateType,
+      });
+    } catch {
+      // getStats is best-effort diagnostics only.
+    }
+  }
+
+  const cleanupCall = useCallback(() => {
     pcRef.current?.close();
     pcRef.current = null;
     localStreamRef.current?.getTracks().forEach((track) => track.stop());
     localStreamRef.current = null;
     pendingCandidatesRef.current = [];
     pendingOfferRef.current = null;
+    iceRestartAttemptedRef.current = false;
+    clearFailTimeout();
     if (localVideoRef.current) localVideoRef.current.srcObject = null;
     if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
     setConnectionState(null);
     setPhase("idle");
-  }
+  }, [clearFailTimeout]);
 
   function endCall(notifyPeer: boolean) {
     if (notifyPeer && phase !== "idle") {
@@ -142,14 +206,29 @@ export function CallClient({
       setMicEnabled(true);
       setCameraEnabled(true);
       return stream;
-    } catch {
-      setError("Camera/microphone permission was denied or unavailable.");
+    } catch (err) {
+      // iOS Safari throws these same DOMException names as Chrome/Android,
+      // but hits NotAllowedError far more often in practice (its permission
+      // prompt is per-origin and easy to have previously dismissed/denied).
+      const name = err instanceof DOMException ? err.name : undefined;
+      if (name === "NotAllowedError" || name === "SecurityError") {
+        setError("Camera/microphone access was denied. Check your browser's site permissions and try again.");
+      } else if (name === "NotFoundError" || name === "OverconstrainedError") {
+        setError("No camera or microphone was found on this device.");
+      } else if (name === "NotReadableError") {
+        setError("Your camera or microphone is already in use by another app.");
+      } else {
+        setError("Camera/microphone permission was denied or unavailable.");
+      }
       throw new Error("getUserMedia failed");
     }
   }
 
   function createPeerConnection(): RTCPeerConnection {
-    const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+    const pc = new RTCPeerConnection({
+      iceServers: iceServersRef.current,
+      ...(ICE_TRANSPORT_POLICY ? { iceTransportPolicy: ICE_TRANSPORT_POLICY } : {}),
+    });
 
     pc.onicecandidate = (event) => {
       if (event.candidate) {
@@ -163,11 +242,75 @@ export function CallClient({
       }
     };
 
+    // Renegotiation entry point — fires when restartIce() (below) needs a
+    // fresh offer sent. Reuses the existing call:offer/call:answer events;
+    // handleOffer/handleAnswer apply it to the existing connection instead
+    // of treating it as a new incoming call when one is already active.
+    pc.onnegotiationneeded = async () => {
+      try {
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        socket.emit("call:offer", { matchId, sdp: offer });
+      } catch (err) {
+        console.error("[call] renegotiation offer failed:", err);
+      }
+    };
+
+    pc.oniceconnectionstatechange = () => {
+      console.log(`[call] ICE connection state -> ${pc.iceConnectionState}`);
+      if (pc.iceConnectionState === "connected" || pc.iceConnectionState === "completed") {
+        iceRestartAttemptedRef.current = false;
+        clearFailTimeout();
+        logSelectedCandidatePair(pc);
+      }
+    };
+
     pc.onconnectionstatechange = () => {
+      console.log(`[call] connection state -> ${pc.connectionState}`);
       setConnectionState(pc.connectionState);
+
+      if (pc.connectionState === "connected") {
+        clearFailTimeout();
+      }
+
+      // "disconnected" is often a transient blip (switching Wi-Fi/cellular,
+      // a brief network drop) — the ICE agent frequently recovers on its own
+      // within a few seconds, so give it a grace period before treating it
+      // as fatal rather than ending the call immediately.
+      if (pc.connectionState === "disconnected") {
+        clearFailTimeout();
+        failTimeoutRef.current = setTimeout(() => {
+          const current = pcRef.current;
+          if (current && (current.connectionState === "disconnected" || current.connectionState === "failed")) {
+            setError("Call connection failed (this can happen without a TURN server across strict networks).");
+            endCall(true);
+          }
+        }, 6000);
+      }
+
       if (pc.connectionState === "failed") {
-        setError("Call connection failed (this can happen without a TURN server across strict networks).");
-        endCall(true);
+        if (!iceRestartAttemptedRef.current) {
+          // One best-effort recovery attempt before giving up — common on
+          // mobile networks where the original path briefly drops.
+          iceRestartAttemptedRef.current = true;
+          console.warn("[call] connection failed — attempting one ICE restart");
+          try {
+            pc.restartIce();
+          } catch (err) {
+            console.error("[call] restartIce() failed:", err);
+          }
+          clearFailTimeout();
+          failTimeoutRef.current = setTimeout(() => {
+            if (pcRef.current?.connectionState === "failed") {
+              setError("Call connection failed (this can happen without a TURN server across strict networks).");
+              endCall(true);
+            }
+          }, 6000);
+        } else {
+          clearFailTimeout();
+          setError("Call connection failed (this can happen without a TURN server across strict networks).");
+          endCall(true);
+        }
       }
     };
 
@@ -251,6 +394,23 @@ export function CallClient({
 
   useEffect(() => {
     async function handleOffer(payload: OfferPayload) {
+      const pc = pcRef.current;
+      // A renegotiation offer (e.g. from restartIce() on an ICE restart)
+      // arrives while a call is already active on an existing connection —
+      // apply it in place rather than treating it as a new incoming call.
+      if (phase === "active" && pc) {
+        try {
+          await pc.setRemoteDescription(payload.sdp);
+          await flushPendingCandidates();
+          const answer = await pc.createAnswer();
+          await pc.setLocalDescription(answer);
+          socket.emit("call:answer", { matchId, sdp: answer });
+        } catch (err) {
+          console.error("[call] failed to apply renegotiation offer:", err);
+        }
+        return;
+      }
+
       if (phase !== "idle") return; // already in/starting a call — no call-waiting support (MVP)
       pendingOfferRef.current = payload.sdp;
       setError(null);
@@ -259,14 +419,23 @@ export function CallClient({
 
     async function handleAnswer(payload: AnswerPayload) {
       const pc = pcRef.current;
-      if (!pc || phase !== "calling") return;
+      // Checking signalingState (rather than just `phase`) lets this apply
+      // both the initial answer and a later renegotiation answer, since the
+      // latter arrives while phase is already "active".
+      if (!pc || pc.signalingState !== "have-local-offer") return;
       try {
         await pc.setRemoteDescription(payload.sdp);
         await flushPendingCandidates();
-        setPhase("active");
-      } catch {
-        setError("Failed to establish the call.");
-        cleanupCall();
+        if (phase !== "active") setPhase("active");
+      } catch (err) {
+        if (phase === "active") {
+          // Renegotiation failed mid-call — the connection-state handlers
+          // above will surface it if the call actually breaks.
+          console.error("[call] failed to apply renegotiation answer:", err);
+        } else {
+          setError("Failed to establish the call.");
+          cleanupCall();
+        }
       }
     }
 
@@ -308,7 +477,7 @@ export function CallClient({
       socket.off("call:ended", handleCallEnded);
       socket.off("chat:user_disconnected", handleUserDisconnected);
     };
-  }, [socket, matchId, phase]);
+  }, [socket, matchId, phase, cleanupCall]);
 
   useEffect(() => {
     onPhaseChange?.(phase);

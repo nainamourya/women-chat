@@ -29,6 +29,15 @@ export async function getProfile(userId: string) {
     interests: selectedInterests,
     profileComplete: isProfileComplete(bio, selectedInterests.length),
     createdAt: user?.createdAt ?? null,
+    // Current DB state, not the session's JWT claims — those are only set
+    // at sign-in and go stale the moment an admin action (verify/suspend/
+    // promote) changes the user's row without them re-authenticating.
+    email: user?.email ?? null,
+    role: user?.role ?? "user",
+    verificationStatus: user?.verificationStatus ?? "unverified",
+    accountStatus: user?.accountStatus ?? "active",
+    suspendedUntil: user?.suspendedUntil ?? null,
+    ageConfirmed18: user?.ageConfirmed18 ?? false,
   };
 }
 
