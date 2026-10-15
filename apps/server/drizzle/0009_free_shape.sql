@@ -1,1 +1,0 @@
-ALTER TYPE "public"."account_status" ADD VALUE 'deleted';
