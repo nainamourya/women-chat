@@ -119,7 +119,12 @@ export async function saveVerificationVideo(base64Data: string, declaredMimeType
     throw new AuthError("Video duration could not be verified.", 400);
   }
 
-  if (durationSeconds > env.VERIFICATION_VIDEO_MAX_DURATION_SECONDS) {
+  // Rounded before comparing — real encoders essentially never produce an
+  // exact whole-second duration (frame-rate rounding, trailing audio
+  // padding), so a video a person trimmed to "15 seconds" on their phone is
+  // routinely reported as e.g. 15.03s or 15.3s. Comparing the rounded value
+  // matches what the person actually sees as the video's length.
+  if (Math.round(durationSeconds) > env.VERIFICATION_VIDEO_MAX_DURATION_SECONDS) {
     throw new AuthError(
       `Video must be ${env.VERIFICATION_VIDEO_MAX_DURATION_SECONDS} seconds or shorter.`,
       400,

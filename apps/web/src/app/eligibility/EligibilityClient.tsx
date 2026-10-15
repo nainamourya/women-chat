@@ -120,7 +120,10 @@ export function EligibilityClient({
 
     try {
       const duration = await readVideoDurationSeconds(selected);
-      if (Number.isFinite(duration) && duration > MAX_VIDEO_SECONDS) {
+      // Rounded before comparing — see the matching server-side check in
+      // videoStorage.ts for why (real encoders rarely hit an exact
+      // whole-second duration).
+      if (Number.isFinite(duration) && Math.round(duration) > MAX_VIDEO_SECONDS) {
         setFileError(`Video must be ${MAX_VIDEO_SECONDS} seconds or shorter.`);
         return;
       }
