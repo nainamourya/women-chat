@@ -88,7 +88,13 @@ export function EligibilityClient({
   initialSubmission: Submission | null;
 }) {
   const { update } = useSession();
-  const [status, setStatus] = useState<VerificationStatus>(initialStatus);
+  // Prefer the freshly-fetched submission's status over the session's
+  // verificationStatus claim: the session comes from the sign-in JWT and
+  // only updates on login or an explicit update() call, so it goes stale
+  // the moment an admin reviews a submission while the applicant stays
+  // signed in — the submission record (re-fetched on every page load in
+  // page.tsx) always reflects the latest decision.
+  const [status, setStatus] = useState<VerificationStatus>(initialSubmission?.status ?? initialStatus);
   const [submission, setSubmission] = useState<Submission | null>(initialSubmission);
   const [acknowledged, setAcknowledged] = useState(false);
   const [file, setFile] = useState<File | null>(null);
