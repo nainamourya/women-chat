@@ -38,6 +38,14 @@
   --lime: #b8cf35;
   --lime-ink: #333b0a;
 
+  /* Lavender — a third brand tint (alongside plum/pink) sampled from the
+     illustrated character set, used for sticker-style image tiles and
+     feature-card backgrounds on the marketing page, so illustrations don't
+     sit on plain white and the page reads as one coordinated palette
+     rather than brand-color-plus-stock-photo. */
+  --lavender: #e7def5;
+  --lavender-ink: #4a3a69;
+
   --success: #16a34a;
   --success-bg: #effcf3;
   --warning: #d97706;
@@ -86,6 +94,9 @@
   --lime: #b8cf35;
   --lime-ink: #1e2206;
 
+  --lavender: #332750;
+  --lavender-ink: #e4d9f9;
+
   /* Brighter status colors (same pattern as Tailwind's own 400-vs-600
      shades) so they stay legible against dark surfaces; "-bg" variants are
      low-alpha overlays rather than pale solid tints, so they work over any
@@ -121,6 +132,8 @@
   --color-accent-bg: var(--accent-bg);
   --color-lime: var(--lime);
   --color-lime-ink: var(--lime-ink);
+  --color-lavender: var(--lavender);
+  --color-lavender-ink: var(--lavender-ink);
 
   --color-success: var(--success);
   --color-success-bg: var(--success-bg);
@@ -138,6 +151,7 @@
 
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-baloo);
 }
 
 body {

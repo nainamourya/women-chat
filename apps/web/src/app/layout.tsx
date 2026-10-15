@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Baloo_2 } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 import { SiteHeader } from "@/components/SiteHeader";
 import { BottomNav } from "@/components/BottomNav";
+import { SiteFooter } from "@/components/SiteFooter";
 import { THEME_STORAGE_KEY } from "@/lib/theme";
 
 // Runs before hydration (and before first paint) so the page never flashes
@@ -33,16 +34,56 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+// Rounded and warm, for marketing headlines only — body text and app UI
+// stay on Geist. Two typefaces with clearly distinct jobs: one carries the
+// brand's personality, the other stays quiet and legible for everyday use.
+const balooDisplay = Baloo_2({
+  variable: "--font-baloo",
+  subsets: ["latin"],
+  weight: ["600", "700", "800"],
+});
+
+const siteUrl = "https://www.giigirl.com";
+
 export const metadata: Metadata = {
-  title: "GiiGirl (prototype)",
-  description: "Women-only peer chat platform for adults 18+ — MVP prototype.",
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: "GiiGirl — A women-only space for real conversation",
+    template: "%s — GiiGirl",
+  },
+  description:
+    "GiiGirl pairs adult women (18+) for private, judgment-free conversation. Every member is reviewed by a real person before they can chat — no bots, no swiping, no men.",
+  keywords: [
+    "women only chat app",
+    "safe space for women",
+    "talk to women online",
+    "women's peer support",
+    "anonymous chat for women",
+  ],
+  openGraph: {
+    title: "GiiGirl — A women-only space for real conversation",
+    description:
+      "Private, judgment-free conversation with other adult women. Every member is reviewed by a real person before they can chat.",
+    url: siteUrl,
+    siteName: "GiiGirl",
+    images: [{ url: "/giigirl-logo.png", width: 1200, height: 630 }],
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "GiiGirl — A women-only space for real conversation",
+    description: "Private, judgment-free conversation with other adult women.",
+    images: ["/giigirl-logo.png"],
+  },
+  robots: { index: true, follow: true },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${balooDisplay.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <body className="relative min-h-full flex flex-col overflow-x-hidden">
@@ -56,7 +97,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         </div>
         <Providers>
           <SiteHeader />
-          <div className="pb-20 sm:pb-0">{children}</div>
+          <div className="flex flex-1 flex-col pb-20 sm:pb-0">{children}</div>
+          <SiteFooter />
           <BottomNav />
         </Providers>
       </body>
