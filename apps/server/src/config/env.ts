@@ -6,6 +6,10 @@ const envSchema = z.object({
   PORT: z.coerce.number().default(4000),
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
   REDIS_URL: z.string().min(1, "REDIS_URL is required"),
+  // Comma-separated if the app is served from more than one domain (e.g. a
+  // Vercel-assigned domain plus a custom domain) — see CORS_ORIGINS below,
+  // which both Express's cors() and the Socket.IO server read instead of
+  // this raw string, since both accept an array of allowed origins.
   CORS_ORIGIN: z.string().min(1, "CORS_ORIGIN is required"),
   // Shared secret so the Next.js server (not the browser) can call trusted
   // internal endpoints. Rotate independently of NEXTAUTH_SECRET.
@@ -59,3 +63,8 @@ if (!parsed.success) {
 }
 
 export const env = parsed.data;
+
+// Split (and trim) so a single Render env var can list multiple allowed
+// origins, e.g. "https://women-chat.vercel.app,https://www.giigirl.com" —
+// both cors() and the Socket.IO server accept an array here natively.
+export const CORS_ORIGINS = env.CORS_ORIGIN.split(",").map((origin) => origin.trim());

@@ -1,7 +1,7 @@
 import express from "express";
 import cors from "cors";
 import { createServer } from "node:http";
-import { env } from "./config/env.js";
+import { env, CORS_ORIGINS } from "./config/env.js";
 import { authRouter } from "./routes/auth.js";
 import { verificationRouter } from "./routes/verification.js";
 import { profileRouter } from "./routes/profile.js";
@@ -36,7 +36,7 @@ app.set("trust proxy", 1);
 
 app.use(
   cors({
-    origin: env.CORS_ORIGIN,
+    origin: CORS_ORIGINS,
     credentials: true,
   }),
 );

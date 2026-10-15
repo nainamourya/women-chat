@@ -2,7 +2,7 @@ import type { Server as HttpServer } from "node:http";
 import { Server as SocketIOServer, type Socket } from "socket.io";
 import { z } from "zod";
 import { eq } from "drizzle-orm";
-import { env } from "../config/env.js";
+import { env, CORS_ORIGINS } from "../config/env.js";
 import { db } from "../db/client.js";
 import { users } from "../db/schema.js";
 import { consumeSocketTicket } from "../redis/socketTickets.js";
@@ -373,7 +373,7 @@ export async function initSocketServer(httpServer: HttpServer): Promise<SocketIO
 
   io = new SocketIOServer(httpServer, {
     cors: {
-      origin: env.CORS_ORIGIN,
+      origin: CORS_ORIGINS,
       credentials: true,
     },
     adapter: adapterHandles.adapter,
