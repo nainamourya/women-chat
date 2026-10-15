@@ -1,6 +1,7 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
+import type { AccountStatus, VerificationStatus } from "@/types/next-auth";
 
 // Auth.js holds no direct database connection. Credential and Google account
 // checks are both delegated to the Express API (the single owner of the
@@ -52,10 +53,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             id: string;
             email: string;
             displayName: string;
-            verificationStatus: "unverified" | "pending" | "verified" | "rejected";
+            verificationStatus: VerificationStatus;
             role: "user" | "admin";
             ageConfirmed18: boolean;
-            accountStatus: "active" | "suspended" | "banned";
+            accountStatus: AccountStatus;
             suspendedUntil: string | null;
           };
         };
@@ -106,10 +107,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           user: {
             id: string;
             displayName: string;
-            verificationStatus: "unverified" | "pending" | "verified" | "rejected";
+            verificationStatus: VerificationStatus;
             role: "user" | "admin";
             ageConfirmed18: boolean;
-            accountStatus: "active" | "suspended" | "banned";
+            accountStatus: AccountStatus;
             suspendedUntil: string | null;
           };
         };

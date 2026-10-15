@@ -30,6 +30,25 @@ const envSchema = z.object({
   TURN_STATIC_CREDENTIAL: z.string().optional(),
   // How long a minted short-lived TURN credential stays valid for.
   TURN_CREDENTIAL_TTL_SECONDS: z.coerce.number().default(3600),
+
+  // Introduction-verification videos, pending manual admin review, are
+  // stored in a private Cloudflare R2 bucket (see the R2_* vars below and
+  // videoStorage.ts) — not on local disk, which would not survive a Render
+  // redeploy/restart.
+  VERIFICATION_VIDEO_MAX_BYTES: z.coerce.number().default(25 * 1024 * 1024), // 25MB
+  // Enforced both client-side (fast UX feedback) and server-side (the real
+  // guarantee — see videoStorage.ts, which reads the actual container
+  // metadata via music-metadata rather than trusting the browser).
+  VERIFICATION_VIDEO_MAX_DURATION_SECONDS: z.coerce.number().default(15),
+
+  // Cloudflare R2 (S3-compatible) — private bucket backing verification
+  // video storage (see videoStorage.ts). All four are required: the server
+  // treats R2 as the only storage backend for this feature, not an optional
+  // enhancement. Never logged, never sent to any client — read only here.
+  R2_ENDPOINT: z.string().min(1, "R2_ENDPOINT is required"),
+  R2_BUCKET_NAME: z.string().min(1, "R2_BUCKET_NAME is required"),
+  R2_ACCESS_KEY_ID: z.string().min(1, "R2_ACCESS_KEY_ID is required"),
+  R2_SECRET_ACCESS_KEY: z.string().min(1, "R2_SECRET_ACCESS_KEY is required"),
 });
 
 const parsed = envSchema.safeParse(process.env);

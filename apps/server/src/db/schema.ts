@@ -1,4 +1,5 @@
-import { pgTable, uuid, text, boolean, timestamp, pgEnum, primaryKey, index, unique } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, boolean, timestamp, pgEnum, primaryKey, index, unique, uniqueIndex } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 
 // Vendor-agnostic verification status. MVP sets this via a manual/stub flow only.
 // A real third-party provider (Persona, Veriff, etc.) will later populate the same
@@ -8,6 +9,9 @@ export const verificationStatusEnum = pgEnum("verification_status", [
   "pending",
   "verified",
   "rejected",
+  // Distinct from "rejected": the applicant is invited to submit a new
+  // video (e.g. unclear footage), rather than a final decision.
+  "resubmission_required",
 ]);
 
 export const userRoleEnum = pgEnum("user_role", ["user", "admin"]);
@@ -46,7 +50,6 @@ export const users = pgTable("users", {
   // Only meaningful when accountStatus === "suspended". Null means an
   // indefinite suspension (admin must manually reactivate).
   suspendedUntil: timestamp("suspended_until", { withTimezone: true }),
-
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -103,19 +106,31 @@ export const matchStatusEnum = pgEnum("match_status", ["active", "ended"]);
 // queue itself lives in Redis (see matchmaking.service.ts) — this table is
 // only the durable record of a match once two users are actually paired, and
 // is the source of truth for "is this user already in an active match".
-export const matches = pgTable("matches", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  userAId: uuid("user_a_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  userBId: uuid("user_b_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  status: matchStatusEnum("status").notNull().default("active"),
+export const matches = pgTable(
+  "matches",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userAId: uuid("user_a_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    userBId: uuid("user_b_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    status: matchStatusEnum("status").notNull().default("active"),
 
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  endedAt: timestamp("ended_at", { withTimezone: true }),
-});
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    endedAt: timestamp("ended_at", { withTimezone: true }),
+  },
+  // Supports findActiveMatch()'s `WHERE status = 'active' AND (user_a_id = $1
+  // OR user_b_id = $1)` — hit on every matchmaking join and every 4s status
+  // poll while a user waits (see matchmaking.service.ts). Two indexes rather
+  // than one composite, so Postgres can BitmapOr across them for the OR
+  // condition — same pattern already used for blocks' blocker/blocked lookup.
+  (table) => [
+    index("matches_user_a_id_status_idx").on(table.userAId, table.status),
+    index("matches_user_b_id_status_idx").on(table.userBId, table.status),
+  ],
+);
 
 export type Match = typeof matches.$inferSelect;
 
@@ -235,3 +250,72 @@ export const blocks = pgTable(
 );
 
 export type Block = typeof blocks.$inferSelect;
+
+// Per-submission record for the introduction-video verification flow.
+// `users.verificationStatus` remains the single source of truth read by the
+// rest of the app for access control (matchmaking/chat/calls) — this table
+// adds what that single column can't: submission history, minimal review
+// metadata (reviewer, decision, timestamp), and video lifecycle/deletion
+// tracking. Never stores the video itself — only an opaque storage key,
+// matching the existing report-evidence pattern (schema.ts `reports` table).
+export const videoVerificationStatusEnum = pgEnum("video_verification_status", [
+  "pending_review",
+  "approved",
+  "rejected",
+  "resubmission_required",
+]);
+
+// Neutral, predefined reasons only — deliberately no free-text field here,
+// so no subjective/sensitive notes (or anything resembling an appearance/
+// gender/voice judgement) can ever be recorded against a submission.
+export const videoRejectionReasonEnum = pgEnum("video_rejection_reason", [
+  "video_unclear_or_incomplete",
+  "duration_or_format_invalid",
+  "does_not_meet_guidelines",
+  "other",
+]);
+
+export const verificationSubmissions = pgTable(
+  "verification_submissions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+
+    status: videoVerificationStatusEnum("status").notNull().default("pending_review"),
+
+    // Opaque server-generated filename within the private video directory —
+    // never a public URL, never client-supplied. Set to NULL once the video
+    // is confirmed deleted (see services/videoVerification.service.ts).
+    videoStorageKey: text("video_storage_key"),
+    videoDeletedAt: timestamp("video_deleted_at", { withTimezone: true }),
+    // True while a review decision has been made but video deletion has not
+    // yet been confirmed — see the service for why "approved" specifically
+    // withholds granting access until this clears.
+    videoDeletionPending: boolean("video_deletion_pending").notNull().default(false),
+    // The decision an admin recorded while deletion was still pending —
+    // applied to `users.verificationStatus` only once deletion succeeds.
+    pendingDecision: videoVerificationStatusEnum("pending_decision"),
+
+    rejectionReason: videoRejectionReasonEnum("rejection_reason"),
+    reviewedBy: uuid("reviewed_by").references(() => users.id),
+    reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("verification_submissions_user_id_idx").on(table.userId),
+    index("verification_submissions_status_idx").on(table.status),
+    // Prevents a second concurrent submission while one is already awaiting
+    // review — enforced at the database level (not just application logic)
+    // so a race between two near-simultaneous submit requests can't create
+    // two "pending_review" rows for the same user.
+    uniqueIndex("verification_submissions_one_pending_per_user")
+      .on(table.userId)
+      .where(sql`${table.status} = 'pending_review'`),
+  ],
+);
+
+export type VerificationSubmission = typeof verificationSubmissions.$inferSelect;
+export type NewVerificationSubmission = typeof verificationSubmissions.$inferInsert;

@@ -75,7 +75,7 @@ function didNotReceive(socket: ClientSocket, event: string, timeoutMs = 600): Pr
 
 beforeAll(async () => {
   httpServer = createServer();
-  initSocketServer(httpServer);
+  await initSocketServer(httpServer);
   await new Promise<void>((resolve) => httpServer.listen(0, resolve));
   const { port } = httpServer.address() as AddressInfo;
   serverUrl = `http://localhost:${port}`;

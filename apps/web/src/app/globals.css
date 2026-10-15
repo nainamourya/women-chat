@@ -1,22 +1,42 @@
 @import "tailwindcss";
 
+/*
+ * Theme tokens: every color in the app is a CSS custom property, referenced
+ * by Tailwind utilities generated below (bg-surface, text-foreground, etc.)
+ * — never a raw hex value in component code. Dark mode is implemented by
+ * overriding these same custom properties inside `.dark` (see below), so
+ * every component that already uses a semantic class adapts automatically
+ * with zero per-component changes. `.dark` is applied to <html> by
+ * ThemeProvider (src/components/ThemeProvider.tsx) and by the
+ * before-interactive script in layout.tsx (which prevents a flash of the
+ * wrong theme on first paint).
+ */
 :root {
-  --background: #fdf2f8;
-  --foreground: #2e1a47;
+  --background: #fff5fa;
+  --foreground: #32194a;
   --surface: #ffffff;
   --surface-hover: #fce7f3;
   --border: #f3d9ec;
 
   --muted: #8a7396;
 
-  --brand: #6b21a8;
-  --brand-hover: #581c87;
+  /* Primary plum — the higher-contrast brand hue for buttons/links in light
+     mode (dark plum text/borders on a light page read clearly). */
+  --brand: #32194a;
+  --brand-hover: #46275f;
   --brand-foreground: #ffffff;
 
-  --accent: #ec4899;
-  --accent-bg: #fce7f3;
+  /* Brand pink — secondary emphasis (badges, tinted panels) in light mode. */
+  --accent: #d93691;
+  --accent-bg: #fce3f0;
 
-  --brand-gradient: linear-gradient(135deg, #6b21a8 0%, #c026a3 50%, #ec4899 100%);
+  --brand-gradient: linear-gradient(135deg, #32194a 0%, #d93691 100%);
+
+  /* Lime accent — available for optional highlights (e.g. "new" markers).
+     Always paired with --lime-ink for text, since lime is light enough
+     that it needs dark text in both themes, not white. */
+  --lime: #b8cf35;
+  --lime-ink: #333b0a;
 
   --success: #16a34a;
   --success-bg: #effcf3;
@@ -32,10 +52,57 @@
   --radius-lg: 1.25rem;
   --radius-full: 9999px;
 
-  --shadow-sm: 0 1px 2px rgba(36, 27, 51, 0.06);
-  --shadow-md: 0 12px 28px -10px rgba(124, 58, 237, 0.18);
+  --shadow-sm: 0 1px 2px rgba(50, 25, 74, 0.08);
+  --shadow-md: 0 12px 28px -10px rgba(50, 25, 74, 0.22);
 
   --transition-fast: 150ms ease;
+
+  color-scheme: light;
+}
+
+.dark {
+  --background: #17111f;
+  --foreground: #fff0fa;
+  --surface: #251b30;
+  --surface-hover: #30203f;
+  --border: #3a2a4c;
+
+  --muted: #c0adc9;
+
+  /* Deep plum has too little contrast against these dark surfaces to serve
+     as a text/border/link color here, so brand pink — the app's other
+     primary hue — takes over that role in dark mode. Plum still appears
+     throughout as the page background and in the (unchanged) gradient. */
+  --brand: #d93691;
+  --brand-hover: #c72c82;
+  --brand-foreground: #ffffff;
+
+  /* A lighter pink keeps accent visually distinct from --brand. */
+  --accent: #f472b6;
+  --accent-bg: rgba(217, 54, 145, 0.18);
+
+  --brand-gradient: linear-gradient(135deg, #32194a 0%, #d93691 100%);
+
+  --lime: #b8cf35;
+  --lime-ink: #1e2206;
+
+  /* Brighter status colors (same pattern as Tailwind's own 400-vs-600
+     shades) so they stay legible against dark surfaces; "-bg" variants are
+     low-alpha overlays rather than pale solid tints, so they work over any
+     of the dark surface tones above. */
+  --success: #4ade80;
+  --success-bg: rgba(74, 222, 128, 0.16);
+  --warning: #fbbf24;
+  --warning-bg: rgba(251, 191, 36, 0.16);
+  --danger: #f87171;
+  --danger-bg: rgba(248, 113, 113, 0.18);
+  --info: #38bdf8;
+  --info-bg: rgba(56, 189, 248, 0.16);
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 14px 32px -10px rgba(0, 0, 0, 0.55);
+
+  color-scheme: dark;
 }
 
 @theme inline {
@@ -52,6 +119,8 @@
   --color-brand-gradient: var(--brand-gradient);
   --color-accent: var(--accent);
   --color-accent-bg: var(--accent-bg);
+  --color-lime: var(--lime);
+  --color-lime-ink: var(--lime-ink);
 
   --color-success: var(--success);
   --color-success-bg: var(--success-bg);
@@ -69,10 +138,6 @@
 
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-html {
-  color-scheme: light;
 }
 
 body {

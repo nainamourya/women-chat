@@ -10,12 +10,22 @@ import {
 } from "../services/reports.service.js";
 import { readEvidence } from "../services/evidenceStorage.js";
 import { requireInternalSecret } from "../middleware/internalAuth.js";
+import { checkLimitFailOpen, sendRateLimitedResponse } from "../redis/rateLimit.js";
 
 export const reportsRouter = Router();
 
 // Express payload limit must cover a base64-encoded 5MB image (~6.7MB) plus
 // JSON overhead — see evidenceStorage.ts for the real byte-size validation.
 reportsRouter.use(requireInternalSecret);
+
+// Initial suggestion (Phase 3), not a measured requirement — see the
+// rate-limiting audit this is based on. Keyed by reporterUserId, which is
+// always the Next.js server's own trusted session user id (confirmed in
+// apps/web/src/app/api/reports/route.ts — never client-supplied). Hitting
+// this limit only ever produces a 429; it never bans, suspends, or
+// otherwise actions the reporter's account.
+const REPORT_LIMIT = 5;
+const REPORT_WINDOW_SECONDS = 60 * 60;
 
 const reasonEnum = z.enum([
   "harassment",
@@ -42,6 +52,14 @@ reportsRouter.post("/", async (req, res) => {
   if (!parsed.success) {
     return res.status(400).json({ error: parsed.error.flatten().fieldErrors });
   }
+
+  const limit = await checkLimitFailOpen(
+    `ratelimit:report:${parsed.data.reporterUserId}`,
+    REPORT_LIMIT,
+    REPORT_WINDOW_SECONDS,
+    "report:create",
+  );
+  if (!limit.allowed) return sendRateLimitedResponse(res, limit.retryAfterSeconds);
 
   try {
     const report = await createReport(parsed.data);

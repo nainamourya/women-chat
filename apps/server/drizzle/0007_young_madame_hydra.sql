@@ -1,0 +1,2 @@
+CREATE INDEX "matches_user_a_id_status_idx" ON "matches" USING btree ("user_a_id","status");--> statement-breakpoint
+CREATE INDEX "matches_user_b_id_status_idx" ON "matches" USING btree ("user_b_id","status");

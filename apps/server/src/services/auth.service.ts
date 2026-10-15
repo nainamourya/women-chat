@@ -40,6 +40,23 @@ export function assertAccountActive(user: Pick<User, "accountStatus" | "suspende
   }
 }
 
+// Single source of truth for "can this user use matchmaking/chat/calls" —
+// used by matchmaking.service.ts (joining the queue), socket/index.ts
+// (every Socket.IO connection, which gates chat and call signaling since
+// both run over that same connection), and the socket-ticket issuance route
+// (so a pending/rejected user can't even obtain a ticket). Centralizing
+// this one check means a future change to eligibility rules (e.g. a new
+// required step) only needs to happen here.
+export function assertEligible(user: Pick<User, "accountStatus" | "suspendedUntil" | "ageConfirmed18" | "verificationStatus">): void {
+  assertAccountActive(user);
+  if (!user.ageConfirmed18) {
+    throw new AuthError("Age confirmation is required before matchmaking.", 403);
+  }
+  if (user.verificationStatus !== "verified") {
+    throw new AuthError("Eligibility verification is required before matchmaking.", 403);
+  }
+}
+
 // Admin-gated endpoints always pass the acting user's *own* session id
 // (the same trust model as every other internal route — see
 // middleware/internalAuth.ts), then verify that user's role from the

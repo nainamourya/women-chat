@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
+import { AppearanceSettings } from "./AppearanceSettings";
 import type { AccountStatus, VerificationStatus } from "@/types/next-auth";
 
 function verificationBadgeVariant(status: VerificationStatus): "success" | "warning" | "danger" | "neutral" {
@@ -83,6 +84,8 @@ export function SettingsPanel({
         </Row>
         <Row label="Member since">{memberSince}</Row>
       </div>
+
+      <AppearanceSettings />
 
       {verificationStatus !== "verified" && (
         <p className="mt-4 text-sm text-muted">

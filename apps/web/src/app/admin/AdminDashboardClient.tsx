@@ -4,11 +4,13 @@ import { useState } from "react";
 import { AdminOverviewClient } from "./AdminOverviewClient";
 import { AdminUsersClient } from "./users/AdminUsersClient";
 import { AdminReportsClient } from "./reports/AdminReportsClient";
+import { AdminVerificationClient } from "./verification/AdminVerificationClient";
 
 const TABS = [
   { key: "overview", label: "Overview" },
   { key: "users", label: "Users" },
   { key: "reports", label: "Reports" },
+  { key: "verification", label: "Verification" },
 ] as const;
 
 type TabKey = (typeof TABS)[number]["key"];
@@ -38,6 +40,7 @@ export function AdminDashboardClient() {
       {tab === "overview" && <AdminOverviewClient />}
       {tab === "users" && <AdminUsersClient />}
       {tab === "reports" && <AdminReportsClient />}
+      {tab === "verification" && <AdminVerificationClient />}
     </div>
   );
 }

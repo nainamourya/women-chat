@@ -15,7 +15,7 @@ type AdminReport = {
   reporterDisplayName: string;
   reportedUserId: string;
   reportedDisplayName: string;
-  reportedAccountStatus: "active" | "suspended" | "banned";
+  reportedAccountStatus: "active" | "suspended" | "banned" | "deleted";
   matchId: string | null;
   reason: string;
   description: string | null;
@@ -39,7 +39,7 @@ const TABS: { value: ReportStatus; label: string }[] = [
 const REASON_LABELS: Record<string, string> = {
   harassment: "Harassment or bullying",
   sexual_inappropriate: "Sexual or inappropriate behavior",
-  not_eligible: "Not eligible for GiGirl",
+  not_eligible: "Not eligible for GiiGirl",
   fake_profile: "Fake/misleading profile",
   spam_scam: "Spam/scam",
   threatening_unsafe: "Threatening or unsafe behavior",

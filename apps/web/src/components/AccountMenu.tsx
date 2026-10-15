@@ -111,7 +111,7 @@ export function AccountMenu({ session }: { session: Session }) {
         aria-label="Account menu"
         onClick={() => setOpen((v) => !v)}
         className="flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold text-brand-foreground"
-        style={{ backgroundImage: "linear-gradient(135deg, #6b21a8, #ec4899)" }}
+        style={{ backgroundImage: "var(--brand-gradient)" }}
       >
         {initial}
       </button>

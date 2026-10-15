@@ -10,6 +10,10 @@ const REQUIRED_ENV_BASELINE = {
   REDIS_URL: "redis://localhost:6379",
   CORS_ORIGIN: "http://localhost:3000",
   INTERNAL_API_SECRET: "test-internal-api-secret-value",
+  R2_ENDPOINT: "https://placeholder.r2.cloudflarestorage.com",
+  R2_BUCKET_NAME: "test-bucket",
+  R2_ACCESS_KEY_ID: "test-access-key-id",
+  R2_SECRET_ACCESS_KEY: "test-secret-access-key",
 };
 
 async function loadWithEnv(overrides: Record<string, string | undefined>) {

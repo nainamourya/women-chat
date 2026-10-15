@@ -1,23 +1,20 @@
 import { and, eq, or } from "drizzle-orm";
 import { db } from "../db/client.js";
 import { matches, users } from "../db/schema.js";
-import { AuthError, assertAccountActive } from "./auth.service.js";
+import { AuthError, assertEligible as assertEligibleUser } from "./auth.service.js";
 import { isWaiting, joinQueue, leaveQueue, refreshWaiting } from "../redis/matchmakingQueue.js";
 import { emitToUser } from "../socket/index.js";
 import { getBlockedCounterpartIds } from "./blocks.service.js";
 
+// Thin DB-fetching wrapper around the shared, centralized eligibility check
+// in auth.service.ts (also used by socket/index.ts and the socket-ticket
+// route) — kept here so existing call sites in this file don't change.
 async function assertEligible(userId: string) {
   const user = await db.query.users.findFirst({ where: eq(users.id, userId) });
   if (!user) {
     throw new AuthError("User not found.", 404);
   }
-  assertAccountActive(user);
-  if (!user.ageConfirmed18) {
-    throw new AuthError("Age confirmation is required before matchmaking.", 403);
-  }
-  if (user.verificationStatus !== "verified") {
-    throw new AuthError("Eligibility verification is required before matchmaking.", 403);
-  }
+  assertEligibleUser(user);
 }
 
 // The durable record in Postgres — not the Redis queue — is the source of

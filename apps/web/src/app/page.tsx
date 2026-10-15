@@ -2,11 +2,14 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { useSession } from "next-auth/react";
 import { Badge } from "@/components/ui/Badge";
 import { Mascot } from "@/components/Mascot";
 import { FloatingDoodles } from "@/components/FloatingDoodles";
 
 export default function Home() {
+  const { data: session, status } = useSession();
+
   return (
     <main className="relative mx-auto flex w-full max-w-2xl flex-1 flex-col items-center justify-center gap-3 px-6 py-6 text-center sm:gap-6 sm:py-24">
       <FloatingDoodles />
@@ -31,27 +34,38 @@ export default function Home() {
         </h1>
 
         <p className="max-w-xl text-sm leading-relaxed text-muted sm:text-base">
-          GiGirl is an early MVP for peer-to-peer conversation between adult women
+          GiiGirl is an early MVP for peer-to-peer conversation between adult women
           (18+) — not a dating app, not a content platform. Eligibility verification
           is currently a <strong className="text-foreground">prototype/test flow only</strong>,
           not a real identity or age check. Matching and chat features are still in
           development.
         </p>
 
-        <div className="flex flex-col items-center gap-2 sm:flex-row sm:gap-3">
-          <Link
-            href="/signup"
-            className="rounded-full bg-brand px-5 py-2.5 text-sm font-medium text-brand-foreground shadow-md transition-transform hover:-translate-y-0.5 hover:bg-brand-hover"
-          >
-            Create an account
-          </Link>
-          <Link
-            href="/login"
-            className="rounded-full border border-border px-5 py-2.5 text-sm font-medium text-foreground transition-transform hover:-translate-y-0.5 hover:bg-surface-hover"
-          >
-            Log in
-          </Link>
-        </div>
+        {status === "authenticated" && session ? (
+          <div className="flex flex-col items-center gap-2 sm:flex-row sm:gap-3">
+            <Link
+              href="/match"
+              className="rounded-full bg-brand px-5 py-2.5 text-sm font-medium text-brand-foreground shadow-md transition-transform hover:-translate-y-0.5 hover:bg-brand-hover"
+            >
+              Find someone
+            </Link>
+          </div>
+        ) : status === "unauthenticated" ? (
+          <div className="flex flex-col items-center gap-2 sm:flex-row sm:gap-3">
+            <Link
+              href="/signup"
+              className="rounded-full bg-brand px-5 py-2.5 text-sm font-medium text-brand-foreground shadow-md transition-transform hover:-translate-y-0.5 hover:bg-brand-hover"
+            >
+              Create an account
+            </Link>
+            <Link
+              href="/login"
+              className="rounded-full border border-border px-5 py-2.5 text-sm font-medium text-foreground transition-transform hover:-translate-y-0.5 hover:bg-surface-hover"
+            >
+              Log in
+            </Link>
+          </div>
+        ) : null}
       </motion.div>
     </main>
   );

@@ -66,7 +66,7 @@ export function BottomNav() {
         <Link href="/match" className="-mt-5 flex flex-col items-center gap-1">
           <span
             className="flex h-12 w-12 items-center justify-center rounded-full text-white shadow-md"
-            style={{ backgroundImage: "linear-gradient(135deg, #6b21a8, #ec4899)" }}
+            style={{ backgroundImage: "var(--brand-gradient)" }}
           >
             <FindSomeoneIcon className="h-6 w-6" />
           </span>

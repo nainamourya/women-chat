@@ -1,6 +1,6 @@
 import type { DefaultSession } from "next-auth";
 
-export type VerificationStatus = "unverified" | "pending" | "verified" | "rejected";
+export type VerificationStatus = "unverified" | "pending" | "verified" | "rejected" | "resubmission_required";
 export type AccountStatus = "active" | "suspended" | "banned";
 
 declare module "next-auth" {
