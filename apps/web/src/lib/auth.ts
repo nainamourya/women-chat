@@ -12,6 +12,11 @@ import type { AccountStatus, VerificationStatus } from "@/types/next-auth";
 // then carries straight into the `jwt` callback (safe because, with no
 // adapter, it's the exact same object reference throughout the request).
 export const { handlers, signIn, signOut, auth } = NextAuth({
+  // This app is reachable from more than one domain (the Vercel-assigned
+  // women-chat.vercel.app and the custom giigirl.com domain) — without this,
+  // Auth.js only trusts the single host baked into AUTH_URL and fails with
+  // a generic "Configuration" error on every other domain it's served from.
+  trustHost: true,
   session: { strategy: "jwt" },
   pages: {
     signIn: "/login",
