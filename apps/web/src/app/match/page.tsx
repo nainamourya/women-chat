@@ -7,13 +7,21 @@ import { Badge } from "@/components/ui/Badge";
 import { Alert } from "@/components/ui/Alert";
 import { Mascot } from "@/components/Mascot";
 
-async function fetchProfileComplete(userId: string): Promise<boolean> {
+// Fetched fresh from the database rather than trusting
+// session.user.verificationStatus — that's the sign-in JWT's claim, which
+// only updates on login or an explicit client-side update() call, so it
+// goes stale the moment an admin approves a submission while the applicant
+// stays signed in (same issue fixed on the eligibility page).
+async function fetchEligibilityState(userId: string): Promise<{ profileComplete: boolean; verified: boolean }> {
   const res = await fetch(`${process.env.SERVER_URL}/api/profile/${userId}`, {
     headers: { "x-internal-api-secret": process.env.INTERNAL_API_SECRET! },
     cache: "no-store",
   });
   const data = await res.json();
-  return Boolean(data.profile?.profileComplete);
+  return {
+    profileComplete: Boolean(data.profile?.profileComplete),
+    verified: data.profile?.verificationStatus === "verified",
+  };
 }
 
 export default async function MatchPage() {
@@ -25,8 +33,7 @@ export default async function MatchPage() {
     redirect("/confirm-age");
   }
 
-  const profileComplete = await fetchProfileComplete(session.user.id);
-  const eligible = session.user.verificationStatus === "verified";
+  const { profileComplete, verified: eligible } = await fetchEligibilityState(session.user.id);
 
   return (
     <main className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center px-6 py-16">
