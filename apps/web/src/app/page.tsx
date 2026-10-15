@@ -160,15 +160,20 @@ export default function Home() {
             initial={{ opacity: 0, scale: 0.92 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.6, delay: 0.1, ease: "easeOut" }}
-            className="relative mx-auto flex max-w-sm items-center justify-center"
+            className="relative flex h-[22rem] w-full items-center justify-center sm:h-[26rem]"
           >
-            <div className="absolute inset-6 -z-10 rounded-[3rem] bg-lavender/60 dark:bg-lavender/30" />
-            <Image src={girlArt} alt="" priority className="w-[62%] rounded-[2rem] shadow-md" />
+            <div className="absolute top-1/2 left-1/2 -z-10 h-72 w-72 -translate-x-1/2 -translate-y-1/2 rounded-full bg-lavender/70 blur-2xl dark:bg-lavender/25" />
+            <Image
+              src={girlArt}
+              alt="Illustration of a woman smiling warmly"
+              priority
+              className="absolute top-0 left-2 w-[56%] -rotate-3 drop-shadow-xl sm:left-6"
+            />
             <Image
               src={bunnyArt}
-              alt=""
+              alt="Illustration of a cheerful bunny"
               priority
-              className="absolute -right-2 -bottom-6 w-[46%] rounded-[2rem] shadow-md sm:-right-6"
+              className="absolute right-0 bottom-2 w-[46%] rotate-6 drop-shadow-xl sm:right-4"
             />
           </motion.div>
         </div>
@@ -176,24 +181,30 @@ export default function Home() {
 
       {/* Trust strip */}
       <section id="safety" className="border-t border-border bg-surface">
-        <div className="mx-auto w-full max-w-5xl px-6 py-14 sm:px-8">
-          <h2 className="mb-8 font-display text-2xl font-bold text-foreground sm:text-3xl">
-            Built to feel safe, not just say it
-          </h2>
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mx-auto grid w-full max-w-5xl gap-10 px-6 py-14 sm:px-8 md:grid-cols-[0.8fr_1.2fr] md:gap-16 md:py-20">
+          <div className="flex flex-col gap-4">
+            <h2 className="font-display text-2xl font-bold text-foreground sm:text-3xl">
+              Built to feel safe, not just say it
+            </h2>
+            <p className="max-w-xs text-sm leading-relaxed text-muted">
+              Most apps ask you to trust a policy. GiiGirl is built so there&apos;s nothing
+              risky to trust in the first place.
+            </p>
+          </div>
+
+          <dl className="flex flex-col divide-y divide-border">
             {trustPoints.map(({ icon: Icon, title, body }) => (
-              <div
-                key={title}
-                className="flex flex-col gap-3 rounded-2xl border border-border bg-background p-5"
-              >
-                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-lavender text-lavender-ink">
+              <div key={title} className="flex items-start gap-4 py-5 first:pt-0 last:pb-0">
+                <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-lavender text-lavender-ink">
                   <Icon />
                 </span>
-                <h3 className="text-sm font-semibold text-foreground">{title}</h3>
-                <p className="text-sm leading-relaxed text-muted">{body}</p>
+                <div>
+                  <dt className="text-sm font-semibold text-foreground">{title}</dt>
+                  <dd className="mt-0.5 text-sm leading-relaxed text-muted">{body}</dd>
+                </div>
               </div>
             ))}
-          </div>
+          </dl>
         </div>
       </section>
 
@@ -219,22 +230,29 @@ export default function Home() {
             </ol>
           </div>
 
-          <div className="relative flex items-center justify-center">
-            <div className="absolute inset-10 -z-10 rounded-[3rem] bg-accent-bg" />
-            <Image src={catArt} alt="" className="w-[42%] rounded-[1.75rem] shadow-md" />
+          <div className="relative flex h-72 items-center justify-center sm:h-80">
+            <div className="absolute top-1/2 left-1/2 -z-10 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full bg-accent-bg blur-2xl" />
+            <Image
+              src={catArt}
+              alt="Illustration of a playful cat"
+              className="absolute bottom-0 left-1/2 w-[48%] -translate-x-[62%] rotate-3 drop-shadow-xl"
+            />
             <Image
               src={cloudArt}
-              alt=""
-              className="absolute -top-4 right-2 w-[34%] rounded-[1.75rem] shadow-md sm:right-8"
+              alt="Illustration of a smiling cloud"
+              className="absolute top-2 left-1/2 w-[38%] translate-x-[10%] -rotate-6 drop-shadow-xl"
             />
           </div>
         </div>
       </section>
 
       {/* Final CTA */}
-      <section className="border-t border-border bg-surface">
-        <div className="mx-auto flex w-full max-w-5xl flex-col items-center gap-6 px-6 py-16 text-center sm:px-8">
-          <Image src={ghostArt} alt="" className="w-28 rounded-[1.5rem] shadow-md" />
+      <section className="relative overflow-hidden border-t border-border bg-surface">
+        <div className="mx-auto flex w-full max-w-5xl flex-col items-center gap-2 px-6 py-16 text-center sm:px-8">
+          <div className="relative mb-2 h-28 w-28">
+            <div className="absolute top-1/2 left-1/2 -z-10 h-40 w-40 -translate-x-1/2 -translate-y-1/2 rounded-full bg-lavender/70 blur-2xl dark:bg-lavender/25" />
+            <Image src={ghostArt} alt="Illustration of a friendly ghost" className="drop-shadow-xl" />
+          </div>
           <h2 className="font-display max-w-md text-2xl font-bold text-foreground sm:text-3xl">
             Ready to talk to someone who gets it?
           </h2>
