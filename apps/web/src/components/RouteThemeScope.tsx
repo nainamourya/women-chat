@@ -2,13 +2,16 @@
 
 import { usePathname } from "next/navigation";
 
-// The public landing page ("/") always uses its own light, pastel theme,
-// regardless of the visitor's dark/light preference — it's a marketing
-// surface with a fixed brand identity, not an app screen. Every other route
-// keeps following the normal theme system untouched (see ThemeProvider).
+// The public landing page ("/") always uses the app's dark theme as its
+// fixed brand identity — deep plum/near-black background, rose-pink accent
+// — regardless of the visitor's actual light/dark preference. This reuses
+// the existing `.dark` class (see globals.css) rather than a separate
+// token set, since it's the same palette already defined there. Every
+// other route keeps following the normal theme system untouched (see
+// ThemeProvider).
 export function RouteThemeScope({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const forceLight = pathname === "/";
+  const forceDark = pathname === "/";
 
-  return <div className={`flex flex-1 flex-col ${forceLight ? "theme-light-landing" : ""}`}>{children}</div>;
+  return <div className={`flex flex-1 flex-col ${forceDark ? "dark" : ""}`}>{children}</div>;
 }
