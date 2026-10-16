@@ -106,6 +106,19 @@ export function registerChatHandlers(socket: Socket) {
 
       socket.to(room).emit("chat:user_connected", { userId });
       ack({ ok: true, messages, otherUserId });
+
+      // Both participants are in the room — tell them so the designated
+      // caller can start the video call without a ring/accept step and
+      // without sending an offer the other side isn't listening for yet.
+      try {
+        const members = await socket.nsp.in(room).fetchSockets();
+        const userIds = new Set(members.map((s) => s.data.userId as string));
+        if (userIds.size >= 2) {
+          socket.nsp.server.to(room).emit("call:ready", { matchId: match.id });
+        }
+      } catch {
+        // Best-effort: the manual "Start a video call" button still works.
+      }
     } catch (err) {
       ack({ ok: false, error: errorMessage(err) });
     }

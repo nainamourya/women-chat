@@ -97,12 +97,19 @@ export function CallClient({
   onPhaseChange,
   chatOpen,
   onToggleChat,
+  autoConnect = false,
+  isCaller = false,
 }: {
   socket: Socket;
   matchId: string;
   onPhaseChange?: (phase: CallPhase) => void;
   chatOpen?: boolean;
   onToggleChat?: () => void;
+  // When set, the call starts on its own as soon as both matched users are in
+  // the room: the designated caller sends the offer and the other side
+  // answers without a ring/accept step.
+  autoConnect?: boolean;
+  isCaller?: boolean;
 }) {
   const [phase, setPhase] = useState<CallPhase>("idle");
   const [connectionState, setConnectionState] = useState<RTCPeerConnectionState | null>(null);
@@ -115,8 +122,14 @@ export function CallClient({
   const localStreamRef = useRef<MediaStream | null>(null);
   const pendingCandidatesRef = useRef<RTCIceCandidateInit[]>([]);
   const pendingOfferRef = useRef<RTCSessionDescriptionInit | null>(null);
+  const autoHandledRef = useRef(false);
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
+  // The remote <video> only exists once the call overlay is mounted, which can
+  // happen after ontrack fires (the auto-answering side goes idle -> active
+  // with no "ringing" phase in between), so the stream is kept here and
+  // attached by an effect once the element is there.
+  const remoteStreamRef = useRef<MediaStream | null>(null);
   // Always mounted (unlike the overlay below, which unmounts when idle) so
   // the draggable bubble's dragConstraints ref is never null when it mounts.
   const constraintsRef = useRef<HTMLDivElement>(null);
@@ -187,6 +200,7 @@ export function CallClient({
     clearFailTimeout();
     if (localVideoRef.current) localVideoRef.current.srcObject = null;
     if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
+    remoteStreamRef.current = null;
     setConnectionState(null);
     setPhase("idle");
   }, [clearFailTimeout]);
@@ -237,6 +251,7 @@ export function CallClient({
     };
 
     pc.ontrack = (event) => {
+      remoteStreamRef.current = event.streams[0];
       if (remoteVideoRef.current) {
         remoteVideoRef.current.srcObject = event.streams[0];
       }
@@ -414,6 +429,14 @@ export function CallClient({
       if (phase !== "idle") return; // already in/starting a call — no call-waiting support (MVP)
       pendingOfferRef.current = payload.sdp;
       setError(null);
+      if (autoConnect) {
+        if (autoHandledRef.current) return;
+        autoHandledRef.current = true;
+        void acceptIncomingCall().finally(() => {
+          autoHandledRef.current = false;
+        });
+        return;
+      }
       setPhase("ringing");
     }
 
@@ -464,6 +487,15 @@ export function CallClient({
       cleanupCall();
     }
 
+    function handleReady() {
+      if (!autoConnect || !isCaller || phase !== "idle" || autoHandledRef.current) return;
+      autoHandledRef.current = true;
+      void startCall().finally(() => {
+        autoHandledRef.current = false;
+      });
+    }
+
+    socket.on("call:ready", handleReady);
     socket.on("call:offer", handleOffer);
     socket.on("call:answer", handleAnswer);
     socket.on("call:ice-candidate", handleIceCandidate);
@@ -471,13 +503,21 @@ export function CallClient({
     socket.on("chat:user_disconnected", handleUserDisconnected);
 
     return () => {
+      socket.off("call:ready", handleReady);
       socket.off("call:offer", handleOffer);
       socket.off("call:answer", handleAnswer);
       socket.off("call:ice-candidate", handleIceCandidate);
       socket.off("call:ended", handleCallEnded);
       socket.off("chat:user_disconnected", handleUserDisconnected);
     };
-  }, [socket, matchId, phase, cleanupCall]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [socket, matchId, phase, cleanupCall, autoConnect, isCaller]);
+
+  useEffect(() => {
+    if (phase !== "idle" && remoteVideoRef.current && remoteStreamRef.current) {
+      remoteVideoRef.current.srcObject = remoteStreamRef.current;
+    }
+  }, [phase]);
 
   useEffect(() => {
     onPhaseChange?.(phase);

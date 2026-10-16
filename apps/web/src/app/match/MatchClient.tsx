@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { io, type Socket } from "socket.io-client";
+import { useSession } from "next-auth/react";
 import { ChatClient } from "./ChatClient";
 import { CallClient } from "./CallClient";
 import { Card } from "@/components/ui/Card";
@@ -50,6 +51,8 @@ const POLL_INTERVAL_MS = 4000;
 export function MatchClient() {
   const [state, setState] = useState<MatchState>("idle");
   const [matchId, setMatchId] = useState<string | null>(null);
+  const [otherUserId, setOtherUserId] = useState<string | null>(null);
+  const { data: session } = useSession();
   const [otherDisplayName, setOtherDisplayName] = useState<string | null>(null);
   const [otherBio, setOtherBio] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -73,6 +76,7 @@ export function MatchClient() {
   function applyStatus(data: StatusResponse) {
     setState(data.state);
     setMatchId(data.matchId ?? null);
+    setOtherUserId(data.otherUserId ?? null);
     setOtherDisplayName(data.otherDisplayName ?? null);
     setOtherBio(data.otherBio ?? null);
     if (data.state === "matched") {
@@ -82,6 +86,7 @@ export function MatchClient() {
 
   function handleChatEnded() {
     setMatchId(null);
+    setOtherUserId(null);
     setState("idle");
     setChatOpen(false);
     setCallPhase("idle");
@@ -136,6 +141,7 @@ export function MatchClient() {
       (payload: { matchId: string; otherUserId: string; otherDisplayName: string; otherBio: string | null }) => {
         setState("matched");
         setMatchId(payload.matchId);
+        setOtherUserId(payload.otherUserId);
         setOtherDisplayName(payload.otherDisplayName);
         setOtherBio(payload.otherBio);
         stopPolling();
@@ -167,6 +173,16 @@ export function MatchClient() {
     setLoading(true);
     setError(null);
     try {
+      // Matching drops the user straight into a video call, so ask for
+      // camera/mic here, inside the click, while the browser still allows the
+      // prompt. Once granted, the call itself starts without asking again.
+      try {
+        const probe = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+        probe.getTracks().forEach((track) => track.stop());
+      } catch {
+        setError("Camera and microphone access is needed to meet someone. Allow it in your browser's site settings and try again.");
+        return;
+      }
       await connectSocket();
       const res = await fetch("/api/matchmaking/join", { method: "POST" });
       const data = await res.json();
@@ -258,7 +274,7 @@ export function MatchClient() {
           <div className="flex flex-col gap-1">
             <h2 className="text-base font-semibold text-foreground">Ready when you are</h2>
             <p className="text-sm text-muted">
-              We&apos;ll pair you with another verified member for a private chat and video call.
+              We&apos;ll pair you with another verified member who&apos;s here right now and start a video call straight away.
             </p>
           </div>
           <Button type="button" onClick={handleFindSomeone} disabled={loading} className="w-full">
@@ -287,7 +303,7 @@ export function MatchClient() {
               <Mascot mood="celebrate" size="sm" />
               <div>
                 <p className="text-sm font-medium text-foreground">Someone&apos;s here!</p>
-                <p className="text-xs text-muted">Say hello or start a video call when you&apos;re ready.</p>
+                <p className="text-xs text-muted">Connecting your video call…</p>
               </div>
             </Card>
           )}
@@ -330,6 +346,8 @@ export function MatchClient() {
             socket={socket}
             matchId={matchId}
             onPhaseChange={setCallPhase}
+            autoConnect
+            isCaller={Boolean(session?.user?.id && otherUserId && session.user.id < otherUserId)}
             chatOpen={chatOpen}
             onToggleChat={() => setChatOpen((v) => !v)}
           />
