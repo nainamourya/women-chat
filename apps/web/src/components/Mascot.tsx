@@ -6,7 +6,7 @@ const INK = "#3a2a52";
 const BODY_FILL = "#ede4fb";
 const BLUSH = "#ec4899";
 
-export type MascotMood = "wave" | "search" | "celebrate" | "peek";
+export type MascotMood = "idle" | "wave" | "search" | "celebrate" | "peek" | "point" | "thinking" | "reassure";
 
 const sizeClasses = {
   sm: "h-16 w-14",
@@ -45,10 +45,24 @@ export function Mascot({
         ease: "easeInOut" as const,
       };
 
-  const waveAnimation = reduceMotion ? undefined : { rotate: [0, -18, -4, -16, 0] };
+  // Only "wave" and "celebrate" actually wave — every other mood holds a
+  // still, mood-specific arm pose instead (pointing, thinking, reassuring).
+  const animatedArm = mood === "wave" || mood === "celebrate";
+  const waveAnimation = reduceMotion || !animatedArm ? undefined : { rotate: [0, -18, -4, -16, 0] };
   const waveTransition = reduceMotion
     ? undefined
     : { duration: 2.2, repeat: Infinity, ease: "easeInOut" as const };
+
+  const rightArm =
+    mood === "point"
+      ? { path: "M94 78 Q112 90 124 98", handCx: 126, handCy: 100 }
+      : mood === "thinking"
+        ? { path: "M94 78 Q102 56 80 50", handCx: 78, handCy: 48 }
+        : mood === "reassure"
+          ? { path: "M94 78 Q80 90 62 92", handCx: 60, handCy: 92 }
+          : { path: "M94 78 Q112 64 108 40", handCx: 108, handCy: 38 };
+
+  const useArcEyes = mood === "search" || mood === "thinking" || mood === "reassure";
 
   const bubbleAnimation = reduceMotion
     ? { opacity: 1, y: 0, scale: 1 }
@@ -61,7 +75,11 @@ export function Mascot({
         scale: { duration: 0.5 },
       };
 
-  const showBothArms = mood === "celebrate";
+  const showBothArms = mood === "celebrate" || mood === "reassure";
+  const leftArm =
+    mood === "reassure"
+      ? { path: "M26 78 Q40 90 58 92", handCx: 60, handCy: 92 }
+      : { path: "M26 78 Q8 64 12 40", handCx: 12, handCy: 38 };
 
   return (
     <div className={`relative flex items-center justify-center ${className}`} aria-hidden="true">
@@ -104,7 +122,7 @@ export function Mascot({
           <circle cx="40" cy="74" r="4" fill={BLUSH} opacity="0.55" />
           <circle cx="80" cy="74" r="4" fill={BLUSH} opacity="0.55" />
 
-          {mood === "search" ? (
+          {useArcEyes ? (
             <>
               <path d="M44 64 Q48 60 52 64" stroke={INK} strokeWidth="2.5" strokeLinecap="round" fill="none" />
               <path d="M68 64 Q72 60 76 64" stroke={INK} strokeWidth="2.5" strokeLinecap="round" fill="none" />
@@ -129,18 +147,14 @@ export function Mascot({
             animate={waveAnimation}
             transition={waveTransition}
           >
-            <path d="M94 78 Q112 64 108 40" stroke={INK} strokeWidth="3" strokeLinecap="round" fill="none" />
-            <circle cx="108" cy="38" r="6" fill={BODY_FILL} stroke={INK} strokeWidth="3" />
+            <path d={rightArm.path} stroke={INK} strokeWidth="3" strokeLinecap="round" fill="none" />
+            <circle cx={rightArm.handCx} cy={rightArm.handCy} r="6" fill={BODY_FILL} stroke={INK} strokeWidth="3" />
           </motion.g>
 
           {showBothArms && (
-            <motion.g
-              style={{ transformOrigin: "26px 78px" }}
-              animate={waveAnimation}
-              transition={waveTransition}
-            >
-              <path d="M26 78 Q8 64 12 40" stroke={INK} strokeWidth="3" strokeLinecap="round" fill="none" />
-              <circle cx="12" cy="38" r="6" fill={BODY_FILL} stroke={INK} strokeWidth="3" />
+            <motion.g style={{ transformOrigin: "26px 78px" }} animate={animatedArm ? waveAnimation : undefined} transition={waveTransition}>
+              <path d={leftArm.path} stroke={INK} strokeWidth="3" strokeLinecap="round" fill="none" />
+              <circle cx={leftArm.handCx} cy={leftArm.handCy} r="6" fill={BODY_FILL} stroke={INK} strokeWidth="3" />
             </motion.g>
           )}
         </svg>
