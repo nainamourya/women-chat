@@ -16,5 +16,11 @@ jobs:
   ping:
     runs-on: ubuntu-latest
     steps:
+      # A cold Render instance can take longer than 20s to answer the first
+      # request after waking up, which was failing this step outright. 60s
+      # plus one retry gives a sleeping instance a real chance to wake and
+      # respond before this is treated as a genuine outage.
       - name: Ping health endpoint
-        run: curl -fsS --max-time 20 https://jingirl-backend.onrender.com/api/health
+        run: |
+          curl -fsS --connect-timeout 10 --max-time 60 --retry 1 --retry-delay 5 \
+            https://jingirl-backend.onrender.com/api/health
