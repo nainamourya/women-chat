@@ -39,14 +39,21 @@ type StatusResponse = {
   state: MatchState;
   matchId?: string;
   otherUserId?: string;
+  otherDisplayName?: string;
+  otherBio?: string | null;
 };
+
+type EndAck = { ok: true } | { ok: false; error: string };
 
 const POLL_INTERVAL_MS = 4000;
 
 export function MatchClient() {
   const [state, setState] = useState<MatchState>("idle");
   const [matchId, setMatchId] = useState<string | null>(null);
+  const [otherDisplayName, setOtherDisplayName] = useState<string | null>(null);
+  const [otherBio, setOtherBio] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [endingAction, setEndingAction] = useState<"next" | "end" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [socket, setSocket] = useState<Socket | null>(null);
   const [showMatchBanner, setShowMatchBanner] = useState(false);
@@ -66,6 +73,8 @@ export function MatchClient() {
   function applyStatus(data: StatusResponse) {
     setState(data.state);
     setMatchId(data.matchId ?? null);
+    setOtherDisplayName(data.otherDisplayName ?? null);
+    setOtherBio(data.otherBio ?? null);
     if (data.state === "matched") {
       stopPolling();
     }
@@ -76,6 +85,8 @@ export function MatchClient() {
     setState("idle");
     setChatOpen(false);
     setCallPhase("idle");
+    setOtherDisplayName(null);
+    setOtherBio(null);
   }
 
   const prevStateRef = useRef<MatchState>("idle");
@@ -120,11 +131,16 @@ export function MatchClient() {
     const { ticket } = await ticketRes.json();
 
     const socket = io(process.env.NEXT_PUBLIC_SOCKET_URL!, { auth: { ticket } });
-    socket.on("matchmaking:match_found", (payload: { matchId: string; otherUserId: string }) => {
-      setState("matched");
-      setMatchId(payload.matchId);
-      stopPolling();
-    });
+    socket.on(
+      "matchmaking:match_found",
+      (payload: { matchId: string; otherUserId: string; otherDisplayName: string; otherBio: string | null }) => {
+        setState("matched");
+        setMatchId(payload.matchId);
+        setOtherDisplayName(payload.otherDisplayName);
+        setOtherBio(payload.otherBio);
+        stopPolling();
+      },
+    );
     socketRef.current = socket;
     setSocket(socket);
   }
@@ -188,6 +204,52 @@ export function MatchClient() {
     }
   }
 
+  function endCurrentMatch(): Promise<EndAck> {
+    return new Promise((resolve) => {
+      if (!socket || !matchId) {
+        resolve({ ok: false, error: "Not currently matched." });
+        return;
+      }
+      socket.emit("chat:end", { matchId }, (ack: EndAck) => resolve(ack));
+    });
+  }
+
+  // "Didn't like this match" — ends it and immediately looks for someone
+  // else, rather than dropping back to the idle "Ready when you are" screen.
+  async function handleNext() {
+    setEndingAction("next");
+    setError(null);
+    try {
+      const ack = await endCurrentMatch();
+      if (!ack.ok) {
+        setError(ack.error);
+        return;
+      }
+      handleChatEnded();
+      await handleFindSomeone();
+    } finally {
+      setEndingAction(null);
+    }
+  }
+
+  // Ends the match and stops looking entirely — the front-screen equivalent
+  // of ChatClient's "End Chat" button, available without having to open
+  // chat first.
+  async function handleEndMatch() {
+    setEndingAction("end");
+    setError(null);
+    try {
+      const ack = await endCurrentMatch();
+      if (!ack.ok) {
+        setError(ack.error);
+        return;
+      }
+      handleChatEnded();
+    } finally {
+      setEndingAction(null);
+    }
+  }
+
   return (
     <div className="flex flex-col gap-4">
       {state === "idle" && (
@@ -229,6 +291,40 @@ export function MatchClient() {
               </div>
             </Card>
           )}
+
+          <Card className="flex flex-col gap-3 p-4">
+            <div className="flex items-center gap-3">
+              <Avatar size="md" />
+              <div className="flex flex-col">
+                <span className="text-sm font-semibold text-foreground">{otherDisplayName ?? "Someone new"}</span>
+                <span className="text-xs text-muted">
+                  {otherBio && otherBio.trim() ? otherBio : "They haven't written a bio yet."}
+                </span>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleNext}
+                disabled={endingAction !== null}
+                className="flex-1"
+              >
+                {endingAction === "next" ? "Finding someone else…" : "Not for me — next"}
+              </Button>
+              <Button
+                type="button"
+                variant="danger"
+                size="sm"
+                onClick={handleEndMatch}
+                disabled={endingAction !== null}
+              >
+                {endingAction === "end" ? "Ending…" : "End"}
+              </Button>
+            </div>
+          </Card>
+
           <CallClient
             key={`call-${matchId}`}
             socket={socket}

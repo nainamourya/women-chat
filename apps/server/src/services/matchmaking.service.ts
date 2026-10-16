@@ -1,6 +1,6 @@
 import { and, eq, or } from "drizzle-orm";
 import { db } from "../db/client.js";
-import { matches, users } from "../db/schema.js";
+import { matches, users, userProfiles } from "../db/schema.js";
 import { AuthError, assertEligible as assertEligibleUser } from "./auth.service.js";
 import { isWaiting, joinQueue, leaveQueue, refreshWaiting } from "../redis/matchmakingQueue.js";
 import { emitToUser } from "../socket/index.js";
@@ -33,17 +33,30 @@ function otherUserId(match: { userAId: string; userBId: string }, userId: string
   return match.userAId === userId ? match.userBId : match.userAId;
 }
 
+// Minimal intro shown the moment a match is found — just enough to decide
+// whether to start chatting or move on, never the full (private-by-default)
+// profile a user only ever sees for themselves.
+async function getIntro(userId: string): Promise<{ displayName: string; bio: string | null }> {
+  const [user, profile] = await Promise.all([
+    db.query.users.findFirst({ where: eq(users.id, userId) }),
+    db.query.userProfiles.findFirst({ where: eq(userProfiles.userId, userId) }),
+  ]);
+  return { displayName: user?.displayName ?? "Someone new", bio: profile?.bio ?? null };
+}
+
 export type MatchmakingStatus =
   | { state: "idle" }
   | { state: "waiting" }
-  | { state: "matched"; matchId: string; otherUserId: string };
+  | { state: "matched"; matchId: string; otherUserId: string; otherDisplayName: string; otherBio: string | null };
 
 export async function joinMatchmaking(userId: string): Promise<MatchmakingStatus> {
   await assertEligible(userId);
 
   const existingMatch = await findActiveMatch(userId);
   if (existingMatch) {
-    return { state: "matched", matchId: existingMatch.id, otherUserId: otherUserId(existingMatch, userId) };
+    const otherId = otherUserId(existingMatch, userId);
+    const intro = await getIntro(otherId);
+    return { state: "matched", matchId: existingMatch.id, otherUserId: otherId, otherDisplayName: intro.displayName, otherBio: intro.bio };
   }
 
   const blockedIds = await getBlockedCounterpartIds(userId);
@@ -67,11 +80,23 @@ export async function joinMatchmaking(userId: string): Promise<MatchmakingStatus
     .values({ userAId: candidateId, userBId: userId, status: "active" })
     .returning();
 
-  emitToUser(userId, "matchmaking:started", {});
-  emitToUser(userId, "matchmaking:match_found", { matchId: match.id, otherUserId: candidateId });
-  emitToUser(candidateId, "matchmaking:match_found", { matchId: match.id, otherUserId: userId });
+  const [userIntro, candidateIntro] = await Promise.all([getIntro(userId), getIntro(candidateId)]);
 
-  return { state: "matched", matchId: match.id, otherUserId: candidateId };
+  emitToUser(userId, "matchmaking:started", {});
+  emitToUser(userId, "matchmaking:match_found", {
+    matchId: match.id,
+    otherUserId: candidateId,
+    otherDisplayName: candidateIntro.displayName,
+    otherBio: candidateIntro.bio,
+  });
+  emitToUser(candidateId, "matchmaking:match_found", {
+    matchId: match.id,
+    otherUserId: userId,
+    otherDisplayName: userIntro.displayName,
+    otherBio: userIntro.bio,
+  });
+
+  return { state: "matched", matchId: match.id, otherUserId: candidateId, otherDisplayName: candidateIntro.displayName, otherBio: candidateIntro.bio };
 }
 
 export async function leaveMatchmaking(userId: string): Promise<MatchmakingStatus> {
@@ -88,7 +113,9 @@ export async function leaveMatchmaking(userId: string): Promise<MatchmakingStatu
 export async function getMatchmakingStatus(userId: string): Promise<MatchmakingStatus> {
   const existingMatch = await findActiveMatch(userId);
   if (existingMatch) {
-    return { state: "matched", matchId: existingMatch.id, otherUserId: otherUserId(existingMatch, userId) };
+    const otherId = otherUserId(existingMatch, userId);
+    const intro = await getIntro(otherId);
+    return { state: "matched", matchId: existingMatch.id, otherUserId: otherId, otherDisplayName: intro.displayName, otherBio: intro.bio };
   }
 
   if (await isWaiting(userId)) {
