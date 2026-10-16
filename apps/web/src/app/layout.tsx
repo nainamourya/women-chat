@@ -5,6 +5,7 @@ import { Providers } from "./providers";
 import { SiteHeader } from "@/components/SiteHeader";
 import { BottomNav } from "@/components/BottomNav";
 import { SiteFooter } from "@/components/SiteFooter";
+import { RouteThemeScope } from "@/components/RouteThemeScope";
 import { THEME_STORAGE_KEY } from "@/lib/theme";
 
 // Runs before hydration (and before first paint) so the page never flashes
@@ -96,9 +97,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <div className="absolute -bottom-32 -left-24 h-96 w-96 rounded-full bg-accent/10 blur-3xl" />
         </div>
         <Providers>
-          <SiteHeader />
-          <div className="flex flex-1 flex-col pb-20 sm:pb-0">{children}</div>
-          <SiteFooter />
+          <RouteThemeScope>
+            <SiteHeader />
+            <div className="flex flex-1 flex-col bg-background pb-20 sm:pb-0">{children}</div>
+            <SiteFooter />
+          </RouteThemeScope>
           <BottomNav />
         </Providers>
       </body>

@@ -150,14 +150,14 @@ export default function Home() {
     status === "loading" ? null : authed ? (
       <Link
         href="/match"
-        className="rounded-full bg-brand px-6 py-3 text-center text-sm font-semibold text-brand-foreground shadow-md transition-transform hover:-translate-y-0.5 hover:bg-brand-hover"
+        className="rounded-full bg-accent px-6 py-3 text-center text-sm font-semibold text-accent-foreground shadow-md transition-transform hover:-translate-y-0.5 hover:bg-accent-hover"
       >
         Find someone to talk to
       </Link>
     ) : (
       <Link
         href="/signup"
-        className="rounded-full bg-brand px-6 py-3 text-center text-sm font-semibold text-brand-foreground shadow-md transition-transform hover:-translate-y-0.5 hover:bg-brand-hover"
+        className="rounded-full bg-accent px-6 py-3 text-center text-sm font-semibold text-accent-foreground shadow-md transition-transform hover:-translate-y-0.5 hover:bg-accent-hover"
       >
         Find someone to talk to
       </Link>
@@ -167,9 +167,9 @@ export default function Home() {
     <MotionConfig reducedMotion="user">
       <main className="flex flex-1 flex-col">
         {/* Hero */}
-        <section className="relative overflow-hidden">
+        <section className="relative overflow-hidden bg-background">
           <FloatingDoodles />
-          <div className="mx-auto grid w-full max-w-5xl items-center gap-10 px-6 py-14 sm:px-8 sm:py-20 md:grid-cols-2 md:gap-6 md:py-24">
+          <div className="mx-auto grid w-full max-w-5xl items-center gap-8 px-6 py-10 sm:px-8 sm:py-20 md:grid-cols-2 md:gap-6 md:py-24">
             <motion.div
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
@@ -204,7 +204,7 @@ export default function Home() {
               initial={{ opacity: 0, scale: 0.96 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.6, delay: 0.1, ease: "easeOut" }}
-              className="relative flex h-[22rem] w-full items-center justify-center sm:h-[26rem]"
+              className="relative flex h-64 w-full items-center justify-center sm:h-[26rem]"
             >
               <div className="absolute top-1/2 left-1/2 -z-10 h-72 w-72 -translate-x-1/2 -translate-y-1/2 rounded-full bg-lavender/70 blur-2xl dark:bg-lavender/25" />
               <div className="absolute top-[6%] right-[4%] z-10 rounded-2xl rounded-br-sm border border-brand/20 bg-surface px-3.5 py-2 text-sm font-medium text-foreground shadow-md sm:right-[10%]">
@@ -262,7 +262,7 @@ export default function Home() {
         </section>
 
         {/* How it works */}
-        <section id="how-it-works" className="border-t border-border">
+        <section id="how-it-works" className="border-t border-border bg-background">
           <div className="mx-auto w-full max-w-2xl px-6 py-14 sm:px-8 md:py-20">
             <motion.div
               initial="hidden"

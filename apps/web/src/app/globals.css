@@ -28,6 +28,8 @@
 
   /* Brand pink — secondary emphasis (badges, tinted panels) in light mode. */
   --accent: #d93691;
+  --accent-hover: #c0297d;
+  --accent-foreground: #ffffff;
   --accent-bg: #fce3f0;
 
   --brand-gradient: linear-gradient(135deg, #32194a 0%, #d93691 100%);
@@ -87,6 +89,8 @@
 
   /* A lighter pink keeps accent visually distinct from --brand. */
   --accent: #f472b6;
+  --accent-hover: #ec6fb0;
+  --accent-foreground: #2a1033;
   --accent-bg: rgba(217, 54, 145, 0.18);
 
   --brand-gradient: linear-gradient(135deg, #32194a 0%, #d93691 100%);
@@ -116,6 +120,42 @@
   color-scheme: dark;
 }
 
+/*
+ * Forced-light theme scope for the public landing page only. The landing
+ * page is a marketing surface with its own pastel brand identity — it
+ * should never look dark, even when a visitor (or a signed-in user passing
+ * through "/") has dark mode selected. Applied via RouteThemeScope to an
+ * element that wraps the header, page content, and footer together, so
+ * everything already using the semantic bg-surface/text-foreground/etc.
+ * classes picks this up automatically — no component changes needed, and
+ * dark mode for the rest of the authenticated app is completely untouched.
+ */
+.theme-light-landing {
+  --background: #fffbfe;
+  --foreground: #30203a;
+  --surface: #fff0f7;
+  --surface-hover: #f2eafe;
+  --border: #ebddeb;
+
+  --muted: #75667e;
+
+  --brand: #40204f;
+  --brand-hover: #2f1739;
+  --brand-foreground: #ffffff;
+
+  /* The landing page's primary CTA is a distinct rose pink, not the plum
+     used for brand text/headings elsewhere on this same page. */
+  --accent: #d92f91;
+  --accent-hover: #c02a82;
+  --accent-foreground: #ffffff;
+  --accent-bg: #fff0f7;
+
+  --lavender: #f2eafe;
+  --lavender-ink: #40204f;
+
+  color-scheme: light;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -129,6 +169,8 @@
   --color-brand-foreground: var(--brand-foreground);
   --color-brand-gradient: var(--brand-gradient);
   --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-foreground: var(--accent-foreground);
   --color-accent-bg: var(--accent-bg);
   --color-lime: var(--lime);
   --color-lime-ink: var(--lime-ink);
