@@ -1,11 +1,49 @@
 "use client";
 
 import Link from "next/link";
-import { motion, MotionConfig } from "framer-motion";
+import Image from "next/image";
+import { motion, MotionConfig, useReducedMotion } from "framer-motion";
 import { useSession } from "next-auth/react";
 import { FloatingDoodles } from "@/components/FloatingDoodles";
-import { Mascot } from "@/components/Mascot";
 import { Badge } from "@/components/ui/Badge";
+import girlArt from "../../public/char-girl.png";
+
+// GiiGirl's one approved brand character image — the same unaltered asset is
+// reused at different sizes/placements across the page rather than faking
+// new poses (no image-generation tool is available to create real new
+// poses). Never rotated, skewed, or stretched; only uniformly scaled.
+function BrandCharacter({ className }: { className?: string }) {
+  return <Image src={girlArt} alt="GiiGirl" className={className} />;
+}
+
+// A couple of small, slow-floating hearts for sections that don't have the
+// full FloatingDoodles field — reuses the same ink-outlined heart shape so
+// it reads as one illustration language, not a second decoration system.
+function FloatingHeart({ className, delay = 0 }: { className?: string; delay?: number }) {
+  const reduceMotion = useReducedMotion();
+  return (
+    <motion.svg
+      viewBox="0 0 24 24"
+      className={className}
+      initial={{ opacity: 0, y: 6 }}
+      animate={reduceMotion ? { opacity: 0.9, y: 0 } : { opacity: 0.9, y: [6, -6, 6] }}
+      transition={
+        reduceMotion
+          ? { duration: 0.5, delay }
+          : { duration: 3.4, repeat: Infinity, ease: "easeInOut", delay }
+      }
+      aria-hidden="true"
+    >
+      <path
+        d="M12 20 C4 14 2 9.5 5.2 6.8 C7.6 4.8 10.6 5.6 12 8 C13.4 5.6 16.4 4.8 18.8 6.8 C22 9.5 20 14 12 20 Z"
+        fill="#f472b6"
+        stroke="#3a2a52"
+        strokeWidth="1.2"
+        strokeLinejoin="round"
+      />
+    </motion.svg>
+  );
+}
 
 function ShieldHeartIcon() {
   return (
@@ -163,13 +201,18 @@ export default function Home() {
             </motion.div>
 
             <motion.div
-              initial={{ opacity: 0, scale: 0.92 }}
+              initial={{ opacity: 0, scale: 0.96 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.6, delay: 0.1, ease: "easeOut" }}
               className="relative flex h-[22rem] w-full items-center justify-center sm:h-[26rem]"
             >
               <div className="absolute top-1/2 left-1/2 -z-10 h-72 w-72 -translate-x-1/2 -translate-y-1/2 rounded-full bg-lavender/70 blur-2xl dark:bg-lavender/25" />
-              <Mascot mood="wave" size="lg" caption="Hey, welcome!" className="scale-[2.4]" />
+              <div className="absolute top-[6%] right-[4%] z-10 rounded-2xl rounded-br-sm border border-brand/20 bg-surface px-3.5 py-2 text-sm font-medium text-foreground shadow-md sm:right-[10%]">
+                Hey, welcome! 👋
+              </div>
+              <FloatingHeart className="absolute top-[8%] right-[18%] h-5 w-5" delay={0.3} />
+              <FloatingHeart className="absolute bottom-[14%] left-[20%] h-4 w-4" delay={1.1} />
+              <BrandCharacter className="w-[72%] max-w-xs drop-shadow-xl sm:max-w-sm" />
             </motion.div>
           </div>
         </section>
@@ -185,7 +228,7 @@ export default function Home() {
               transition={{ duration: 0.5 }}
               className="flex flex-col gap-4"
             >
-              <Mascot mood="reassure" size="md" />
+              <BrandCharacter className="w-20" />
               <h2 className="font-display text-2xl font-bold text-foreground sm:text-3xl">
                 Built to feel safe, not just say it
               </h2>
@@ -220,7 +263,7 @@ export default function Home() {
 
         {/* How it works */}
         <section id="how-it-works" className="border-t border-border">
-          <div className="mx-auto grid w-full max-w-5xl gap-10 px-6 py-14 sm:px-8 md:grid-cols-[1fr_1.1fr] md:gap-12 md:py-20">
+          <div className="mx-auto w-full max-w-2xl px-6 py-14 sm:px-8 md:py-20">
             <motion.div
               initial="hidden"
               whileInView="visible"
@@ -229,13 +272,14 @@ export default function Home() {
               transition={{ duration: 0.5 }}
               className="flex flex-col gap-6"
             >
-              <h2 className="font-display text-2xl font-bold text-foreground sm:text-3xl">
+              <h2 className="font-display text-center text-2xl font-bold text-foreground sm:text-3xl">
                 How GiiGirl works
               </h2>
-              <ol className="flex flex-col gap-6">
+              <ol className="relative flex flex-col gap-6">
+                <div aria-hidden="true" className="absolute top-2 bottom-2 left-4 w-px bg-border" />
                 {steps.map((step, i) => (
-                  <li key={step.title} className="flex gap-4">
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand text-sm font-semibold text-brand-foreground">
+                  <li key={step.title} className="relative flex gap-4">
+                    <span className="z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand text-sm font-semibold text-brand-foreground">
                       {i + 1}
                     </span>
                     <div>
@@ -245,18 +289,6 @@ export default function Home() {
                   </li>
                 ))}
               </ol>
-            </motion.div>
-
-            <motion.div
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, margin: "-80px" }}
-              variants={fadeUp}
-              transition={{ duration: 0.5, delay: 0.15 }}
-              className="relative flex h-72 items-center justify-center sm:h-80"
-            >
-              <div className="absolute top-1/2 left-1/2 -z-10 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full bg-accent-bg blur-2xl" />
-              <Mascot mood="point" size="lg" className="scale-[2.2]" />
             </motion.div>
           </div>
         </section>
@@ -321,7 +353,12 @@ export default function Home() {
         {/* Final CTA */}
         <section className="relative overflow-hidden border-t border-border bg-surface">
           <div className="mx-auto flex w-full max-w-5xl flex-col items-center gap-2 px-6 py-16 text-center sm:px-8">
-            <Mascot mood="celebrate" size="lg" className="mb-2 scale-[1.6]" />
+            <div className="relative mb-2 h-32 w-32">
+              <div className="absolute top-1/2 left-1/2 -z-10 h-44 w-44 -translate-x-1/2 -translate-y-1/2 rounded-full bg-lavender/70 blur-2xl dark:bg-lavender/25" />
+              <FloatingHeart className="absolute -top-2 -right-1 h-5 w-5" delay={0.2} />
+              <FloatingHeart className="absolute bottom-0 -left-3 h-4 w-4" delay={0.9} />
+              <BrandCharacter className="h-full w-full object-contain drop-shadow-xl" />
+            </div>
             <h2 className="font-display max-w-md text-2xl font-bold text-foreground sm:text-3xl">
               Your next good conversation starts here.
             </h2>
