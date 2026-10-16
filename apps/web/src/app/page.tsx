@@ -174,7 +174,7 @@ export default function Home() {
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.55, ease: "easeOut" }}
-              className="flex flex-col items-start gap-5 text-left"
+              className="order-last flex flex-col items-start gap-5 text-left md:order-first"
             >
               <h1 className="font-display text-[2.1rem] leading-[1.1] font-extrabold tracking-tight text-foreground sm:text-5xl">
                 A little more understood.
@@ -204,15 +204,15 @@ export default function Home() {
               initial={{ opacity: 0, scale: 0.96 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.6, delay: 0.1, ease: "easeOut" }}
-              className="relative flex h-64 w-full items-center justify-center sm:h-[26rem]"
+              className="relative order-first ml-auto flex h-40 w-40 items-center justify-center md:order-last md:ml-0 md:h-[26rem] md:w-full"
             >
-              <div className="absolute top-1/2 left-1/2 -z-10 h-72 w-72 -translate-x-1/2 -translate-y-1/2 rounded-full bg-lavender/70 blur-2xl dark:bg-lavender/25" />
-              <div className="absolute top-[6%] right-[4%] z-10 rounded-2xl rounded-br-sm border border-brand/20 bg-surface px-3.5 py-2 text-sm font-medium text-foreground shadow-md sm:right-[10%]">
+              <div className="absolute top-1/2 left-1/2 -z-10 h-28 w-28 -translate-x-1/2 -translate-y-1/2 rounded-full bg-lavender/70 blur-xl dark:bg-lavender/25 md:h-72 md:w-72 md:blur-2xl" />
+              <div className="absolute -top-2 -right-2 z-10 rounded-xl rounded-br-sm border border-brand/20 bg-surface px-2 py-1 text-[11px] font-medium text-foreground shadow-md sm:px-2.5 sm:text-xs md:-top-4 md:right-[6%] md:rounded-2xl md:px-3.5 md:py-2 md:text-sm">
                 Hey, welcome! 👋
               </div>
-              <FloatingHeart className="absolute top-[8%] right-[18%] h-5 w-5" delay={0.3} />
-              <FloatingHeart className="absolute bottom-[14%] left-[20%] h-4 w-4" delay={1.1} />
-              <BrandCharacter className="w-[72%] max-w-xs drop-shadow-xl sm:max-w-sm" />
+              <FloatingHeart className="absolute top-[8%] -right-2 h-4 w-4 md:right-[18%] md:h-5 md:w-5" delay={0.3} />
+              <FloatingHeart className="absolute bottom-[14%] -left-2 h-3 w-3 md:left-[20%] md:h-4 md:w-4" delay={1.1} />
+              <BrandCharacter className="w-[80%] drop-shadow-xl md:w-[72%] md:max-w-sm" />
             </motion.div>
           </div>
         </section>
