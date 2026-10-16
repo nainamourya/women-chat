@@ -35,6 +35,14 @@ const envSchema = z.object({
   // How long a minted short-lived TURN credential stays valid for.
   TURN_CREDENTIAL_TTL_SECONDS: z.coerce.number().default(3600),
 
+  // Alternative to TURN_URLS/TURN_STATIC_*: a managed provider (metered.ca)
+  // that mints short-lived credentials via its own REST API rather than a
+  // static shared secret. Checked first in iceServers.service.ts; falls
+  // back to TURN_URLS (then STUN-only) if unset or if the API call fails.
+  METERED_TURN_APP_NAME: z.string().optional(),
+  METERED_TURN_API_KEY: z.string().optional(),
+  METERED_TURN_REGION: z.string().optional(),
+
   // Introduction-verification videos, pending manual admin review, are
   // stored in a private Cloudflare R2 bucket (see the R2_* vars below and
   // videoStorage.ts) — not on local disk, which would not survive a Render

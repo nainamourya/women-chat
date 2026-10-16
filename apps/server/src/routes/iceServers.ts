@@ -11,12 +11,12 @@ iceServersRouter.use(requireInternalSecret);
 // client input — same trust model as the matchmaking router.
 const bodySchema = z.object({ userId: z.string().uuid() });
 
-iceServersRouter.post("/", (req, res) => {
+iceServersRouter.post("/", async (req, res) => {
   const parsed = bodySchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: "Invalid user id." });
   }
 
-  const { iceServers, turnConfigured } = getIceServers(parsed.data.userId);
+  const { iceServers, turnConfigured } = await getIceServers(parsed.data.userId);
   res.status(200).json({ iceServers, turnConfigured });
 });

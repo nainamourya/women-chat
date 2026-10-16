@@ -11,10 +11,58 @@ function hmacCredential(secret: string, username: string): string {
   return crypto.createHmac("sha1", secret).update(username).digest("base64");
 }
 
+const METERED_FETCH_TIMEOUT_MS = 4000;
+
+// metered.ca mints short-lived TURN credentials via its own REST API rather
+// than the static shared-secret scheme below — see apps/server/.env.example.
+// The response is already the exact `{urls, username?, credential?}` shape
+// IceServer uses, so it's returned as-is. Never logs the request URL (it
+// contains the API key in the query string) or any response body.
+async function fetchMeteredIceServers(): Promise<IceServer[] | null> {
+  if (!env.METERED_TURN_APP_NAME || !env.METERED_TURN_API_KEY) return null;
+
+  const url = new URL(`https://${env.METERED_TURN_APP_NAME}.metered.live/api/v1/turn/credentials`);
+  url.searchParams.set("apiKey", env.METERED_TURN_API_KEY);
+  if (env.METERED_TURN_REGION) url.searchParams.set("region", env.METERED_TURN_REGION);
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), METERED_FETCH_TIMEOUT_MS);
+
+  try {
+    const res = await fetch(url, { signal: controller.signal });
+    if (!res.ok) {
+      console.warn(`[ice-servers] metered.ca credential request failed (status ${res.status}) — falling back.`);
+      return null;
+    }
+    const data = (await res.json()) as unknown;
+    if (!Array.isArray(data) || data.length === 0) {
+      console.warn("[ice-servers] metered.ca returned an unexpected response shape — falling back.");
+      return null;
+    }
+    return data as IceServer[];
+  } catch {
+    // Never log the error object itself — it can embed the request URL
+    // (and therefore the API key) via its `cause`/`message` in some
+    // runtimes. A generic message is enough to know this path failed.
+    console.warn("[ice-servers] metered.ca credential request errored or timed out — falling back.");
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 // Builds the ICE server list a client should use for one call attempt.
 // `label` scopes the credential to the requesting user (not logged, not
-// persisted) — it never identifies the call/match itself.
-export function getIceServers(label: string): { iceServers: IceServer[]; turnConfigured: boolean } {
+// persisted) — it never identifies the call/match itself. Tries, in order:
+// 1. metered.ca (if configured) — dynamic, per-request credentials.
+// 2. TURN_URLS + TURN_STATIC_* — a static shared-secret or fixed pair.
+// 3. STUN-only.
+export async function getIceServers(label: string): Promise<{ iceServers: IceServer[]; turnConfigured: boolean }> {
+  const meteredServers = await fetchMeteredIceServers();
+  if (meteredServers) {
+    return { iceServers: [...STUN_SERVERS, ...meteredServers], turnConfigured: true };
+  }
+
   const servers: IceServer[] = [...STUN_SERVERS];
   const turnUrls =
     env.TURN_URLS?.split(",")

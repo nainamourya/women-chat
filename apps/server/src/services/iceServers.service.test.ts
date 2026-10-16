@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 
 const originalEnv = process.env;
 
@@ -28,9 +28,13 @@ describe("getIceServers", () => {
     process.env = { ...REQUIRED_ENV_BASELINE, ...originalEnv };
   });
 
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it("falls back to STUN-only when no TURN config is set", async () => {
     const getIceServers = await loadWithEnv({ TURN_URLS: undefined });
-    const { iceServers, turnConfigured } = getIceServers("user-1");
+    const { iceServers, turnConfigured } = await getIceServers("user-1");
 
     expect(turnConfigured).toBe(false);
     expect(iceServers).toHaveLength(1);
@@ -42,7 +46,7 @@ describe("getIceServers", () => {
       TURN_URLS: "turn:relay.example.com:80",
       TURN_STATIC_AUTH_SECRET: "test-secret",
     });
-    const { iceServers, turnConfigured } = getIceServers("user-1");
+    const { iceServers, turnConfigured } = await getIceServers("user-1");
 
     expect(turnConfigured).toBe(true);
     expect(iceServers).toHaveLength(2);
@@ -59,8 +63,8 @@ describe("getIceServers", () => {
       TURN_STATIC_AUTH_SECRET: "test-secret",
     });
 
-    const a = getIceServers("user-a").iceServers[1];
-    const b = getIceServers("user-b").iceServers[1];
+    const a = (await getIceServers("user-a")).iceServers[1];
+    const b = (await getIceServers("user-b")).iceServers[1];
     expect(a.username).not.toBe(b.username);
     expect(a.credential).not.toBe(b.credential);
   });
@@ -72,7 +76,7 @@ describe("getIceServers", () => {
       TURN_STATIC_USERNAME: "static-user",
       TURN_STATIC_CREDENTIAL: "static-pass",
     });
-    const { iceServers, turnConfigured } = getIceServers("user-1");
+    const { iceServers, turnConfigured } = await getIceServers("user-1");
 
     expect(turnConfigured).toBe(true);
     expect(iceServers[1]).toMatchObject({
@@ -89,9 +93,54 @@ describe("getIceServers", () => {
       TURN_STATIC_USERNAME: undefined,
       TURN_STATIC_CREDENTIAL: undefined,
     });
-    const { iceServers, turnConfigured } = getIceServers("user-1");
+    const { iceServers, turnConfigured } = await getIceServers("user-1");
 
     expect(turnConfigured).toBe(false);
     expect(iceServers).toHaveLength(1);
+  });
+
+  it("uses metered.ca credentials when configured, taking precedence over TURN_URLS", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => [
+        { urls: "stun:example.metered.live:80" },
+        { urls: "turn:example.metered.live:80", username: "metered-user", credential: "metered-pass" },
+      ],
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const getIceServers = await loadWithEnv({
+      METERED_TURN_APP_NAME: "example",
+      METERED_TURN_API_KEY: "test-api-key",
+      TURN_URLS: "turn:relay.example.com:80",
+      TURN_STATIC_AUTH_SECRET: "test-secret",
+    });
+    const { iceServers, turnConfigured } = await getIceServers("user-1");
+
+    expect(turnConfigured).toBe(true);
+    // Our own STUN entry, plus metered's two entries — never the
+    // TURN_URLS-based server, confirming metered.ca took precedence.
+    expect(iceServers).toHaveLength(3);
+    expect(iceServers.some((s) => s.username === "metered-user")).toBe(true);
+    expect(iceServers.some((s) => Array.isArray(s.urls) && s.urls.includes("turn:relay.example.com:80"))).toBe(false);
+
+    const requestedUrl = fetchMock.mock.calls[0][0] as URL;
+    expect(requestedUrl.toString()).toContain("example.metered.live");
+    expect(requestedUrl.searchParams.get("apiKey")).toBe("test-api-key");
+  });
+
+  it("falls back to TURN_URLS when the metered.ca request fails", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 401 }));
+
+    const getIceServers = await loadWithEnv({
+      METERED_TURN_APP_NAME: "example",
+      METERED_TURN_API_KEY: "bad-key",
+      TURN_URLS: "turn:relay.example.com:80",
+      TURN_STATIC_AUTH_SECRET: "test-secret",
+    });
+    const { iceServers, turnConfigured } = await getIceServers("user-1");
+
+    expect(turnConfigured).toBe(true);
+    expect(iceServers[1].urls).toEqual(["turn:relay.example.com:80"]);
   });
 });
