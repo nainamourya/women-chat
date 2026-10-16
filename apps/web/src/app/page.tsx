@@ -204,15 +204,15 @@ export default function Home() {
               initial={{ opacity: 0, scale: 0.96 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.6, delay: 0.1, ease: "easeOut" }}
-              className="relative order-first ml-auto flex h-40 w-40 items-center justify-center md:order-last md:ml-0 md:h-[26rem] md:w-full"
+              className="relative order-first flex h-60 w-full items-center justify-center md:order-last md:h-[26rem]"
             >
-              <div className="absolute top-1/2 left-1/2 -z-10 h-28 w-28 -translate-x-1/2 -translate-y-1/2 rounded-full bg-lavender/70 blur-xl dark:bg-lavender/25 md:h-72 md:w-72 md:blur-2xl" />
-              <div className="absolute -top-2 -right-2 z-10 rounded-xl rounded-br-sm border border-brand/20 bg-surface px-2 py-1 text-[11px] font-medium text-foreground shadow-md sm:px-2.5 sm:text-xs md:-top-4 md:right-[6%] md:rounded-2xl md:px-3.5 md:py-2 md:text-sm">
+              <div className="absolute top-1/2 left-1/2 -z-10 h-44 w-44 -translate-x-1/2 -translate-y-1/2 rounded-full bg-lavender/70 blur-xl dark:bg-lavender/25 md:h-72 md:w-72 md:blur-2xl" />
+              <div className="absolute top-2 right-[12%] z-10 rounded-2xl rounded-br-sm border border-brand/20 bg-surface px-3 py-1.5 text-xs font-medium text-foreground shadow-md md:top-0 md:right-[6%] md:px-3.5 md:py-2 md:text-sm">
                 Hey, welcome! 👋
               </div>
-              <FloatingHeart className="absolute top-[8%] -right-2 h-4 w-4 md:right-[18%] md:h-5 md:w-5" delay={0.3} />
-              <FloatingHeart className="absolute bottom-[14%] -left-2 h-3 w-3 md:left-[20%] md:h-4 md:w-4" delay={1.1} />
-              <BrandCharacter className="w-[80%] drop-shadow-xl md:w-[72%] md:max-w-sm" />
+              <FloatingHeart className="absolute top-[18%] right-[6%] h-4 w-4 md:top-[8%] md:right-[18%] md:h-5 md:w-5" delay={0.3} />
+              <FloatingHeart className="absolute bottom-[10%] left-[10%] h-4 w-4 md:bottom-[14%] md:left-[20%]" delay={1.1} />
+              <BrandCharacter className="w-[62%] max-w-[220px] drop-shadow-xl md:w-[72%] md:max-w-sm" />
             </motion.div>
           </div>
         </section>
