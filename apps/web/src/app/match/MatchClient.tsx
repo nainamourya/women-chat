@@ -63,6 +63,7 @@ export function MatchClient() {
   const [chatOpen, setChatOpen] = useState(false);
   const [callPhase, setCallPhase] = useState<CallPhase>("idle");
   const socketRef = useRef<Socket | null>(null);
+  const connectingRef = useRef(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const bannerTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -129,13 +130,54 @@ export function MatchClient() {
   // Socket connection is a fast-path notification; polling /status is the
   // fallback if a socket event is missed (e.g. brief disconnect).
   async function connectSocket() {
-    if (socketRef.current) return;
+    // connectingRef covers the window before socketRef is assigned, so
+    // overlapping calls (mount + a quick click, or dev double-mount) can't
+    // each open a socket — strays would count against the per-user
+    // concurrent-connection limit.
+    if (socketRef.current || connectingRef.current) return;
+    connectingRef.current = true;
+    try {
+      await openSocket();
+    } finally {
+      connectingRef.current = false;
+    }
+  }
+
+  async function openSocket() {
 
     const ticketRes = await fetch("/api/matchmaking/socket-ticket", { method: "POST" });
     if (!ticketRes.ok) return;
     const { ticket } = await ticketRes.json();
 
-    const socket = io(process.env.NEXT_PUBLIC_SOCKET_URL!, { auth: { ticket } });
+    // Tickets are one-time, so every reconnect attempt (e.g. after a server
+    // restart) must mint a fresh one — reusing the first is rejected as
+    // Unauthorized and the socket never recovers.
+    let firstTicket: string | null = ticket;
+    const socket = io(process.env.NEXT_PUBLIC_SOCKET_URL!, {
+      auth: (cb) => {
+        if (firstTicket) {
+          const t = firstTicket;
+          firstTicket = null;
+          cb({ ticket: t });
+          return;
+        }
+        fetch("/api/matchmaking/socket-ticket", { method: "POST" })
+          .then((r) => (r.ok ? r.json() : null))
+          .then((j) => cb({ ticket: j?.ticket }))
+          .catch(() => cb({}));
+      },
+    });
+    // Socket.IO only auto-reconnects on transport drops. A handshake the
+    // server rejects (e.g. "Too many active connections" while stale leases
+    // from a crashed instance age out) is final, so retry it ourselves with
+    // a fresh ticket until the user leaves the page.
+    socket.on("connect_error", () => {
+      if (!socket.active) {
+        setTimeout(() => {
+          if (socketRef.current === socket) socket.connect();
+        }, 3000);
+      }
+    });
     socket.on(
       "matchmaking:match_found",
       (payload: { matchId: string; otherUserId: string; otherDisplayName: string; otherBio: string | null }) => {
@@ -350,6 +392,7 @@ export function MatchClient() {
             isCaller={Boolean(session?.user?.id && otherUserId && session.user.id < otherUserId)}
             chatOpen={chatOpen}
             onToggleChat={() => setChatOpen((v) => !v)}
+            onNext={handleNext}
           />
 
           {callPhase === "idle" && !chatOpen && (

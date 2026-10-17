@@ -88,6 +88,15 @@ export function ChatClient({
   useEffect(() => {
     function handleConnect() {
       setConnected(true);
+      // Room membership is per-connection: after a reconnect the server has
+      // forgotten this socket, so chat and call signaling only work again
+      // once the room is re-joined.
+      socket.emit("chat:join", { matchId }, (ack: JoinAck) => {
+        if (ack.ok) {
+          setMessages(ack.messages);
+          setOtherUserId(ack.otherUserId);
+        }
+      });
     }
     function handleDisconnect() {
       setConnected(false);

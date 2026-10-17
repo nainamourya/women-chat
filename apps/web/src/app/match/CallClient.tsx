@@ -97,6 +97,7 @@ export function CallClient({
   onPhaseChange,
   chatOpen,
   onToggleChat,
+  onNext,
   autoConnect = false,
   isCaller = false,
 }: {
@@ -105,6 +106,9 @@ export function CallClient({
   onPhaseChange?: (phase: CallPhase) => void;
   chatOpen?: boolean;
   onToggleChat?: () => void;
+  // Ends this match and queues for someone else — the call overlay covers the
+  // match card's own "Not for me — next" button, so it is offered here too.
+  onNext?: () => void;
   // When set, the call starts on its own as soon as both matched users are in
   // the room: the designated caller sends the offer and the other side
   // answers without a ring/accept step.
@@ -700,6 +704,17 @@ export function CallClient({
                       }`}
                     >
                       <ChatBubbleIcon />
+                    </button>
+                  )}
+                  {onNext && (
+                    <button
+                      type="button"
+                      onClick={onNext}
+                      aria-label="Not for me, next"
+                      title="Not for me — next"
+                      className="inline-flex h-14 items-center justify-center rounded-full bg-white/15 px-5 text-sm font-medium text-white transition-colors hover:bg-white/25"
+                    >
+                      Next
                     </button>
                   )}
                   <button
