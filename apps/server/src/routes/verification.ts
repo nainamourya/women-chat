@@ -7,6 +7,7 @@ import {
   submitVerificationVideo,
 } from "../services/videoVerification.service.js";
 import { requireInternalSecret } from "../middleware/internalAuth.js";
+import { developmentOnly } from "../middleware/developmentOnly.js";
 import { checkLimitFailOpen, sendRateLimitedResponse } from "../redis/rateLimit.js";
 
 export const verificationRouter = Router();
@@ -83,7 +84,9 @@ const simulateSchema = z.object({
 });
 
 // PROTOTYPE ONLY — see verification.service.ts. Not a real identity/age check.
-verificationRouter.post("/simulate", async (req, res) => {
+// Development-only: on any other NODE_ENV this is a 404, so it cannot be used
+// to skip the human-reviewed video verification (videoVerification.service.ts).
+verificationRouter.post("/simulate", developmentOnly, async (req, res) => {
   const parsed = simulateSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: parsed.error.flatten().fieldErrors });

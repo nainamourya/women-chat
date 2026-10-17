@@ -1,9 +1,15 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 
-// PROTOTYPE / TEST-ONLY. Uses the session's own user id (never a client-
+// PROTOTYPE / TEST-ONLY — development builds only. Uses the session's own user id (never a client-
 // supplied one) so a signed-in user can only trigger this for themselves.
 export async function POST() {
+  // Mirrors the server's development-only gate (the server is the real
+  // boundary; this just avoids even proxying the call in a deployed build).
+  if (process.env.NODE_ENV !== "development") {
+    return NextResponse.json({ error: "Not found." }, { status: 404 });
+  }
+
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
