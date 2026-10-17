@@ -14,7 +14,7 @@ const reportedUser = alias(users, "reported_user");
 export type AdminReportView = Report & {
   reporterDisplayName: string;
   reportedDisplayName: string;
-  reportedAccountStatus: "active" | "suspended" | "banned";
+  reportedAccountStatus: "active" | "suspended" | "banned" | "deleted";
 };
 
 function selectAdminReportView() {
@@ -34,7 +34,7 @@ function toAdminReportView(row: {
   report: Report;
   reporterDisplayName: string;
   reportedDisplayName: string;
-  reportedAccountStatus: "active" | "suspended" | "banned";
+  reportedAccountStatus: "active" | "suspended" | "banned" | "deleted";
 }): AdminReportView {
   return {
     ...row.report,

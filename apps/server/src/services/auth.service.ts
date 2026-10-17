@@ -29,6 +29,9 @@ function isCurrentlySuspended(user: Pick<User, "accountStatus" | "suspendedUntil
 }
 
 export function assertAccountActive(user: Pick<User, "accountStatus" | "suspendedUntil">): void {
+  if (user.accountStatus === "deleted") {
+    throw new AuthError("This account has been deleted.", 403);
+  }
   if (user.accountStatus === "banned") {
     throw new AuthError("This account has been permanently banned.", 403);
   }

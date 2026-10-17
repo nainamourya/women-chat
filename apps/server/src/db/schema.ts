@@ -19,7 +19,11 @@ export const userRoleEnum = pgEnum("user_role", ["user", "admin"]);
 // Replaces the old boolean `isBanned` flag with a tri-state so a temporary
 // suspension (with an optional expiry) can be distinguished from a
 // permanent ban, per the moderation flow in reports.service.ts.
-export const accountStatusEnum = pgEnum("account_status", ["active", "suspended", "banned"]);
+//
+// "deleted" is the tombstone state set by accountDeletion.service.ts, which
+// anonymizes the row in place rather than removing it (moderation records
+// reference it). Added by migration 0009 — a non-destructive ADD VALUE.
+export const accountStatusEnum = pgEnum("account_status", ["active", "suspended", "banned", "deleted"]);
 
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
