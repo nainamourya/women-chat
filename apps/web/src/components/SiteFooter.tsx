@@ -1,9 +1,6 @@
 import Link from "next/link";
 import { Logo } from "./Logo";
 
-// Deliberately no Privacy Policy / Terms of Service links yet — those pages
-// don't exist in the app. Add them here the moment they're published; a
-// footer link to a 404 is worse than no link at all.
 export function SiteFooter() {
   return (
     <footer className="border-t border-border bg-surface">
@@ -15,7 +12,7 @@ export function SiteFooter() {
           </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-8 sm:grid-cols-3">
+        <div className="grid grid-cols-2 gap-8 sm:grid-cols-4">
           <div className="flex flex-col gap-2.5">
             <span className="text-sm font-semibold text-foreground">Product</span>
             <FooterLink href="/#how-it-works">How it works</FooterLink>
@@ -32,6 +29,13 @@ export function SiteFooter() {
           <div className="flex flex-col gap-2.5">
             <span className="text-sm font-semibold text-foreground">Support</span>
             <FooterLink href="mailto:support@giigirl.com">Contact us</FooterLink>
+          </div>
+
+          <div className="flex flex-col gap-2.5">
+            <span className="text-sm font-semibold text-foreground">Legal</span>
+            <FooterLink href="/terms">Terms of Service</FooterLink>
+            <FooterLink href="/privacy">Privacy Policy</FooterLink>
+            <FooterLink href="/guidelines">Community Guidelines</FooterLink>
           </div>
         </div>
       </div>
