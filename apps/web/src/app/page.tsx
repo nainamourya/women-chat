@@ -7,13 +7,30 @@ import { useSession } from "next-auth/react";
 import { FloatingDoodles } from "@/components/FloatingDoodles";
 import { Badge } from "@/components/ui/Badge";
 import girlArt from "../../public/char-girl.png";
+import girlArtDark from "../../public/char-girl-dark.png";
 
-// GiiGirl's one approved brand character image — the same unaltered asset is
-// reused at different sizes/placements across the page rather than faking
-// new poses (no image-generation tool is available to create real new
-// poses). Never rotated, skewed, or stretched; only uniformly scaled.
+// GiiGirl's one approved brand character image — the same asset is reused at
+// different sizes/placements across the page rather than faking new poses (no
+// image-generation tool is available to create real new poses). Never
+// rotated, skewed, or stretched; only uniformly scaled.
+//
+// Dark mode uses a copy of the same artwork with only the sweater recolored
+// white (public/char-girl-dark.png) — hair, skin, face and hearts are the
+// original pixels. The swap keys off the app's own `.dark` class on <html>
+// (set by ThemeProvider), not Tailwind's `dark:` variant, which here follows
+// the OS setting and would ignore the in-app theme toggle.
 function BrandCharacter({ className }: { className?: string }) {
-  return <Image src={girlArt} alt="GiiGirl" className={className} />;
+  return (
+    <>
+      <Image src={girlArt} alt="GiiGirl" className={`${className ?? ""} [.dark_&]:hidden`} />
+      <Image
+        src={girlArtDark}
+        alt="GiiGirl"
+        aria-hidden="true"
+        className={`${className ?? ""} hidden [.dark_&]:block`}
+      />
+    </>
+  );
 }
 
 // A couple of small, slow-floating hearts for sections that don't have the
