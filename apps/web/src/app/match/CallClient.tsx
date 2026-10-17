@@ -21,6 +21,13 @@ const FALLBACK_ICE_SERVERS: RTCIceServer[] = [{ urls: "stun:stun.l.google.com:19
 const ICE_TRANSPORT_POLICY: RTCIceTransportPolicy | undefined =
   process.env.NEXT_PUBLIC_ICE_TRANSPORT_POLICY === "relay" ? "relay" : undefined;
 
+// Wait at most this long for /api/call/ice-servers before giving up and
+// calling with STUN only (a Render cold start can be slow; a call that can
+// still connect directly should not hang on it forever).
+const ICE_FETCH_TIMEOUT_MS = 8000;
+// Credentials are short-lived; refetch rather than reuse a very old list.
+const ICE_CONFIG_MAX_AGE_MS = 10 * 60 * 1000;
+
 type OfferPayload = { sdp: RTCSessionDescriptionInit; from: string };
 type AnswerPayload = { sdp: RTCSessionDescriptionInit; from: string };
 type IceCandidatePayload = { candidate: RTCIceCandidateInit; from: string };
@@ -138,11 +145,19 @@ export function CallClient({
   // the draggable bubble's dragConstraints ref is never null when it mounts.
   const constraintsRef = useRef<HTMLDivElement>(null);
 
-  // Populated by /api/call/ice-servers on mount; createPeerConnection() reads
-  // the ref directly so a call started before the fetch resolves still works
-  // (just without a TURN relay) rather than waiting on it.
+  // Populated by ensureIceServers(). Every path that creates an
+  // RTCPeerConnection (startCall, acceptIncomingCall) awaits it first, so a
+  // call can never be built from the STUN-only fallback just because the
+  // fetch hadn't finished yet. turnReadyRef reflects what was actually
+  // received (a turn:/turns: URL in the list), not what the server claimed.
   const iceServersRef = useRef<RTCIceServer[]>(FALLBACK_ICE_SERVERS);
-  const turnConfiguredRef = useRef(false);
+  const turnReadyRef = useRef(false);
+  // The single in-flight/settled fetch, shared by the mount prefetch and any
+  // call start so re-renders, reconnects and overlapping starts never fire a
+  // second request. Cleared on failure (so the next call retries) and when
+  // the cached credentials are old.
+  const icePromiseRef = useRef<Promise<void> | null>(null);
+  const iceFetchedAtRef = useRef(0);
   // Guards against retrying restartIce() in a loop for the same failure.
   const iceRestartAttemptedRef = useRef(false);
   const failTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -154,25 +169,61 @@ export function CallClient({
     }
   }, []);
 
-  useEffect(() => {
-    let cancelled = false;
-    fetch("/api/call/ice-servers", { method: "POST" })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (cancelled || !Array.isArray(data?.iceServers) || data.iceServers.length === 0) return;
-        iceServersRef.current = data.iceServers;
-        turnConfiguredRef.current = Boolean(data.turnConfigured);
-        if (!data.turnConfigured) {
-          console.warn("[call] No TURN server configured — calls across strict NATs/firewalls may fail.");
+  // Resolves once the ICE configuration is settled — either the fetched list
+  // or, if the fetch failed or timed out, the STUN-only fallback (never
+  // rejects, so a call is never blocked forever by it). On fallback it logs
+  // loudly and leaves turnReadyRef false rather than pretending TURN works.
+  const ensureIceServers = useCallback((): Promise<void> => {
+    const stale = Date.now() - iceFetchedAtRef.current > ICE_CONFIG_MAX_AGE_MS;
+    if (icePromiseRef.current && !stale) return icePromiseRef.current;
+
+    // Age is counted from when the fetch STARTED, so a request that is still
+    // pending is never mistaken for an old one and duplicated.
+    iceFetchedAtRef.current = Date.now();
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), ICE_FETCH_TIMEOUT_MS);
+    const promise = (async () => {
+      try {
+        const res = await fetch("/api/call/ice-servers", { method: "POST", signal: controller.signal });
+        if (!res.ok) throw new Error(`status ${res.status}`);
+        const data = await res.json();
+        if (!Array.isArray(data?.iceServers) || data.iceServers.length === 0) {
+          throw new Error("empty ICE server list");
         }
-      })
-      .catch(() => {
-        console.warn("[call] Failed to fetch ICE server configuration — falling back to STUN-only.");
-      });
-    return () => {
-      cancelled = true;
-    };
+        iceServersRef.current = data.iceServers;
+        const hasTurn = (data.iceServers as RTCIceServer[]).some((server) =>
+          [server.urls].flat().some((url) => /^turns?:/i.test(url)),
+        );
+        turnReadyRef.current = hasTurn;
+        if (hasTurn) {
+          console.log("[call] ICE configuration ready: STUN + TURN");
+        } else {
+          console.warn("[call] ICE configuration ready but has NO TURN server — calls across strict NATs/firewalls may fail.");
+        }
+      } catch (err) {
+        // Forget the failed attempt so the next call tries again, and say
+        // plainly that this call will run without a relay.
+        icePromiseRef.current = null;
+        iceFetchedAtRef.current = 0;
+        iceServersRef.current = FALLBACK_ICE_SERVERS;
+        turnReadyRef.current = false;
+        console.error(
+          `[call] Could not load ICE configuration (${err instanceof Error ? err.message : "unknown error"}) — ` +
+            "continuing with STUN only; NO TURN relay for this call.",
+        );
+      } finally {
+        clearTimeout(timeout);
+      }
+    })();
+    icePromiseRef.current = promise;
+    return promise;
   }, []);
+
+  // Start fetching as soon as the call component mounts (i.e. at match time),
+  // so by the time the auto-started call needs it, it is usually already done.
+  useEffect(() => {
+    void ensureIceServers();
+  }, [ensureIceServers]);
 
   // Diagnostics only: logs which candidate type (host/srflx/relay) the
   // active connection ended up using — no IPs, ports, or SDP content.
@@ -355,6 +406,7 @@ export function CallClient({
     setStarting(true);
     try {
       const stream = await getLocalMedia();
+      await ensureIceServers();
       const pc = createPeerConnection();
       stream.getTracks().forEach((track) => pc.addTrack(track, stream));
 
@@ -375,6 +427,7 @@ export function CallClient({
     setError(null);
     try {
       const stream = await getLocalMedia();
+      await ensureIceServers();
       const pc = createPeerConnection();
       stream.getTracks().forEach((track) => pc.addTrack(track, stream));
 
