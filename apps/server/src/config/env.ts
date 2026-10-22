@@ -1,76 +1,48 @@
-import "dotenv/config";
-import { z } from "zod";
+import { config as loadDotenv } from "dotenv";
+import { parseEnv } from "./envSchema.js";
+import { assertSafeTestTargets } from "./testTargetGuard.js";
 
-const envSchema = z.object({
-  NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
-  PORT: z.coerce.number().default(4000),
-  DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
-  REDIS_URL: z.string().min(1, "REDIS_URL is required"),
-  // Comma-separated if the app is served from more than one domain (e.g. a
-  // Vercel-assigned domain plus a custom domain) — see CORS_ORIGINS below,
-  // which both Express's cors() and the Socket.IO server read instead of
-  // this raw string, since both accept an array of allowed origins.
-  CORS_ORIGIN: z.string().min(1, "CORS_ORIGIN is required"),
-  // Shared secret so the Next.js server (not the browser) can call trusted
-  // internal endpoints. Rotate independently of NEXTAUTH_SECRET.
-  INTERNAL_API_SECRET: z.string().min(16, "INTERNAL_API_SECRET must be at least 16 chars"),
-  // Local disk directory for report evidence uploads (prototype only — see
-  // evidenceStorage.ts for what production storage would need instead).
-  REPORT_EVIDENCE_DIR: z.string().default("./uploads/reports"),
+// Every database/Redis client imports this module first, so everything that
+// must happen before a connection can exist happens here, in this order:
+//
+// 1. Decide whether a local `.env` file may be read. It is a development
+//    convenience only: never in tests (they get explicit, validated test
+//    configuration instead) and never when NODE_ENV=production is already
+//    set by the host. If NODE_ENV is absent altogether, .env is read purely
+//    so a developer's NODE_ENV=development line can supply it.
+// 2. In test mode, refuse to continue unless the database and Redis URLs are
+//    explicit, opted-in, local test targets — see testTargetGuard.ts.
+// 3. Validate the whole environment. NODE_ENV has no default, so a missing or
+//    invalid value stops startup instead of silently becoming "development".
+const initialNodeEnv = process.env.NODE_ENV;
+const isTestMode = initialNodeEnv === "test";
 
-  // --- WebRTC TURN relay (all optional — calls fall back to STUN-only, with
-  // a startup warning, if none of these are set). See iceServers.service.ts.
-  // Comma-separated turn:/turns: URIs from your TURN provider, e.g.
-  // "turn:relay.example.com:80,turns:relay.example.com:443".
-  TURN_URLS: z.string().optional(),
-  // Preferred: a shared secret for minting short-lived, per-call TURN
-  // credentials (the "coturn REST API" convention — most managed TURN
-  // providers, and self-hosted coturn, support this).
-  TURN_STATIC_AUTH_SECRET: z.string().optional(),
-  // Fallback only, for providers that don't support the shared-secret scheme
-  // above: a single long-lived credential pair. Less secure (never expires
-  // on its own) — rotate it periodically in the provider's dashboard.
-  TURN_STATIC_USERNAME: z.string().optional(),
-  TURN_STATIC_CREDENTIAL: z.string().optional(),
-  // How long a minted short-lived TURN credential stays valid for.
-  TURN_CREDENTIAL_TTL_SECONDS: z.coerce.number().default(3600),
+if (!isTestMode && (initialNodeEnv === undefined || initialNodeEnv === "development")) {
+  loadDotenv({ quiet: true });
+}
 
-  // Alternative to TURN_URLS/TURN_STATIC_*: a managed provider (metered.ca)
-  // that mints short-lived credentials via its own REST API rather than a
-  // static shared secret. Checked first in iceServers.service.ts; falls
-  // back to TURN_URLS (then STUN-only) if unset or if the API call fails.
-  METERED_TURN_APP_NAME: z.string().optional(),
-  METERED_TURN_API_KEY: z.string().optional(),
-  METERED_TURN_REGION: z.string().optional(),
+if (isTestMode) {
+  // Thrown (not process.exit) so the reasons show up as the test file's failure.
+  assertSafeTestTargets({
+    databaseUrl: process.env.DATABASE_URL,
+    redisUrl: process.env.REDIS_URL,
+    optIn: process.env.ALLOW_TEST_DB_WRITES,
+  });
+}
 
-  // Introduction-verification videos, pending manual admin review, are
-  // stored in a private Cloudflare R2 bucket (see the R2_* vars below and
-  // videoStorage.ts) — not on local disk, which would not survive a Render
-  // redeploy/restart.
-  VERIFICATION_VIDEO_MAX_BYTES: z.coerce.number().default(25 * 1024 * 1024), // 25MB
-  // Enforced both client-side (fast UX feedback) and server-side (the real
-  // guarantee — see videoStorage.ts, which reads the actual container
-  // metadata via music-metadata rather than trusting the browser).
-  VERIFICATION_VIDEO_MAX_DURATION_SECONDS: z.coerce.number().default(15),
+const result = parseEnv(process.env);
 
-  // Cloudflare R2 (S3-compatible) — private bucket backing verification
-  // video storage (see videoStorage.ts). All four are required: the server
-  // treats R2 as the only storage backend for this feature, not an optional
-  // enhancement. Never logged, never sent to any client — read only here.
-  R2_ENDPOINT: z.string().min(1, "R2_ENDPOINT is required"),
-  R2_BUCKET_NAME: z.string().min(1, "R2_BUCKET_NAME is required"),
-  R2_ACCESS_KEY_ID: z.string().min(1, "R2_ACCESS_KEY_ID is required"),
-  R2_SECRET_ACCESS_KEY: z.string().min(1, "R2_SECRET_ACCESS_KEY is required"),
-});
-
-const parsed = envSchema.safeParse(process.env);
-
-if (!parsed.success) {
-  console.error("Invalid server environment variables:", parsed.error.flatten().fieldErrors);
+if (!result.success) {
+  // Messages name variables and rules only — never values.
+  const message = ["Invalid server environment configuration:", ...result.errors.map((line) => ` - ${line}`)].join("\n");
+  if (isTestMode) {
+    throw new Error(message);
+  }
+  console.error(message);
   process.exit(1);
 }
 
-export const env = parsed.data;
+export const env = result.data;
 
 // Split (and trim) so a single Render env var can list multiple allowed
 // origins, e.g. "https://women-chat.vercel.app,https://www.giigirl.com" —

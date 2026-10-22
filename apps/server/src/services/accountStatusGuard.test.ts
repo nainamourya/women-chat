@@ -1,5 +1,9 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { AuthError, assertAccountActive, assertEligible } from "./auth.service.js";
+
+// auth.service.ts imports the database client, but these tests only exercise
+// pure functions — mocked so nothing here builds a connection.
+vi.mock("../db/client.js", () => ({ db: {} }));
 
 const eligible = { suspendedUntil: null, ageConfirmed18: true, verificationStatus: "verified" as const };
 

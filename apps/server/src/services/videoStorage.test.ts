@@ -1,4 +1,17 @@
 import { beforeEach, describe, it, expect, vi } from "vitest";
+
+// Synthetic configuration: the real env module (and the database/Redis
+// targets it validates) is not needed to test storage logic.
+vi.mock("../config/env.js", () => ({
+  env: {
+    R2_ENDPOINT: "https://placeholder.r2.example",
+    R2_BUCKET_NAME: "test-bucket",
+    R2_ACCESS_KEY_ID: "test-access-key-id",
+    R2_SECRET_ACCESS_KEY: "test-secret-access-key",
+    VERIFICATION_VIDEO_MAX_BYTES: 25 * 1024 * 1024,
+    VERIFICATION_VIDEO_MAX_DURATION_SECONDS: 15,
+  },
+}));
 import { buildMp4Buffer, fakeMp4Base64, fakeWebmBase64 } from "../testUtils/fakeVideo.js";
 import { saveVerificationVideo, readVerificationVideo, deleteVerificationVideo } from "./videoStorage.js";
 

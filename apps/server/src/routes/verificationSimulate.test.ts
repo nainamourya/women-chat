@@ -3,13 +3,28 @@ import type { AddressInfo } from "node:net";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import express from "express";
 
-// A mutable copy of the real parsed env so each test can pick NODE_ENV; every
-// module in the router's import chain (including developmentOnly and
-// requireInternalSecret) reads this same object at request time.
-vi.mock("../config/env.js", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../config/env.js")>();
-  return { ...actual, env: { ...actual.env } };
-});
+// Fully synthetic configuration — the real env module (and any database or
+// Redis target) is never loaded. `env` is one shared mutable object, so each
+// test can pick NODE_ENV and every module in the router's import chain
+// (developmentOnly, requireInternalSecret, videoStorage …) sees the same value
+// at request time.
+vi.mock("../config/env.js", () => ({
+  env: {
+    NODE_ENV: "development",
+    INTERNAL_API_SECRET: "test-internal-api-secret-0123456789",
+    R2_ENDPOINT: "https://placeholder.r2.example",
+    R2_BUCKET_NAME: "test-bucket",
+    R2_ACCESS_KEY_ID: "test-access-key-id",
+    R2_SECRET_ACCESS_KEY: "test-secret-access-key",
+    VERIFICATION_VIDEO_MAX_BYTES: 25 * 1024 * 1024,
+    VERIFICATION_VIDEO_MAX_DURATION_SECONDS: 15,
+  },
+}));
+
+// The router imports modules that build database and Redis clients. Neither
+// is touched by the simulate route, so both are replaced with inert stubs.
+vi.mock("../db/client.js", () => ({ db: {} }));
+vi.mock("../redis/client.js", () => ({ redis: {} }));
 
 // The service writes to Postgres; the point here is whether the route lets
 // the request reach it, so it is replaced with a spy and no DB is touched.

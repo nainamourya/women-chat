@@ -6,8 +6,12 @@ const originalEnv = process.env;
 // than relying on dotenv having already populated process.env by the time
 // this file loads (test file load order isn't guaranteed).
 const REQUIRED_ENV_BASELINE = {
+  NODE_ENV: "test",
+  // Synthetic, loopback-only targets that satisfy the test-target guard; this
+  // file only imports the env module, so no connection is ever opened.
+  ALLOW_TEST_DB_WRITES: "1",
   DATABASE_URL: "postgresql://test:test@localhost:5432/test",
-  REDIS_URL: "redis://localhost:6379",
+  REDIS_URL: "redis://localhost:6379/15",
   CORS_ORIGIN: "http://localhost:3000",
   INTERNAL_API_SECRET: "test-internal-api-secret-value",
   R2_ENDPOINT: "https://placeholder.r2.cloudflarestorage.com",
@@ -18,14 +22,14 @@ const REQUIRED_ENV_BASELINE = {
 
 async function loadWithEnv(overrides: Record<string, string | undefined>) {
   vi.resetModules();
-  process.env = { ...REQUIRED_ENV_BASELINE, ...originalEnv, ...overrides };
+  process.env = { ...originalEnv, ...REQUIRED_ENV_BASELINE, ...overrides };
   const mod = await import("./iceServers.service.js");
   return mod.getIceServers;
 }
 
 describe("getIceServers", () => {
   beforeEach(() => {
-    process.env = { ...REQUIRED_ENV_BASELINE, ...originalEnv };
+    process.env = { ...originalEnv, ...REQUIRED_ENV_BASELINE };
   });
 
   afterEach(() => {

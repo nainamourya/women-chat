@@ -11,7 +11,10 @@ apps/server/uploads/
 .env
 .env.local
 .env.*.local
+# Test-only database/Redis settings stay local; only the example is committed.
+.env.test
 !.env.example
+!.env.test.example
 
 *.log
 npm-debug.log*
