@@ -111,6 +111,41 @@ describe("config/env — test mode (NODE_ENV=test)", () => {
   });
 });
 
+describe("config/env — a test runner is recognised even when NODE_ENV says otherwise", () => {
+  it("under Vitest with NODE_ENV=development and a production-style URL: guarded, and .env is never read", async () => {
+    // The repo's vitest.config.ts forces NODE_ENV=test; this is the case where
+    // it was bypassed and the shell exported NODE_ENV=development.
+    useEnv({ VITEST: "true", NODE_ENV: "development", ...SAFE_TEST_TARGETS, DATABASE_URL: FAKE_NEON, REDIS_URL: FAKE_UPSTASH, ...REST });
+    await expect(loadEnv()).rejects.toThrow(/Refusing to run tests/);
+    expect(dotenvConfig).not.toHaveBeenCalled();
+  });
+
+  it("under Vitest with no NODE_ENV and nothing configured: guarded, and .env is never read", async () => {
+    useEnv({ VITEST: "true", ...REST });
+    await expect(loadEnv()).rejects.toThrow(/Refusing to run tests/);
+    expect(dotenvConfig).not.toHaveBeenCalled();
+  });
+
+  it("a .env that sets NODE_ENV=test cannot disable the guard by being read first", async () => {
+    useEnv({ ...REST });
+    dotenvConfig.mockImplementationOnce(() => {
+      process.env.NODE_ENV = "test";
+      process.env.DATABASE_URL = FAKE_NEON;
+      process.env.REDIS_URL = FAKE_UPSTASH;
+      return { parsed: {} };
+    });
+    await expect(loadEnv()).rejects.toThrow(/Refusing to run tests/);
+    expect(dotenvConfig).toHaveBeenCalledTimes(1);
+  });
+
+  it("under Vitest with safe, opted-in targets it still starts", async () => {
+    useEnv({ VITEST: "true", NODE_ENV: "development", ...SAFE_TEST_TARGETS, ...REST });
+    const { env } = await loadEnv();
+    expect(env.DATABASE_URL).toBe(SAFE_TEST_TARGETS.DATABASE_URL);
+    expect(dotenvConfig).not.toHaveBeenCalled();
+  });
+});
+
 describe("failed validation opens nothing — zero queries, zero Redis commands", () => {
   const unsafe = { NODE_ENV: "test", ...SAFE_TEST_TARGETS, DATABASE_URL: FAKE_NEON, REDIS_URL: FAKE_UPSTASH, ...REST };
 

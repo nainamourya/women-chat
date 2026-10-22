@@ -12,15 +12,23 @@ redis.on("error", (err: Error) => {
 // this is unit-testable against a deliberately-unreachable instance without
 // touching the real connection — see client.test.ts.
 export async function pingRedis(client: Redis = redis, timeoutMs = 2000): Promise<boolean> {
+  // Cleared in `finally` so a successful ping does not leave a pending timer
+  // behind (it would otherwise keep firing a pointless rejection for up to
+  // `timeoutMs` after every health check).
+  let timer: ReturnType<typeof setTimeout> | undefined;
   try {
     const result = await Promise.race([
       client.ping(),
-      new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Redis ping timed out")), timeoutMs)),
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error("Redis ping timed out")), timeoutMs);
+      }),
     ]);
     return result === "PONG";
   } catch (err) {
     console.error("Redis health check failed:", err);
     return false;
+  } finally {
+    clearTimeout(timer);
   }
 }
 

@@ -14,12 +14,21 @@ import { assertSafeTestTargets } from "./testTargetGuard.js";
 //    explicit, opted-in, local test targets — see testTargetGuard.ts.
 // 3. Validate the whole environment. NODE_ENV has no default, so a missing or
 //    invalid value stops startup instead of silently becoming "development".
+//
+// A test runner is recognised by the runner itself (Vitest sets VITEST in every
+// worker), not only by NODE_ENV: with the repo's vitest.config.ts bypassed and a
+// stray NODE_ENV=development in the shell, relying on NODE_ENV alone would read
+// `.env` and run tests against whatever it points at.
+const underTestRunner = process.env.VITEST !== undefined;
 const initialNodeEnv = process.env.NODE_ENV;
-const isTestMode = initialNodeEnv === "test";
 
-if (!isTestMode && (initialNodeEnv === undefined || initialNodeEnv === "development")) {
+if (!underTestRunner && (initialNodeEnv === undefined || initialNodeEnv === "development")) {
   loadDotenv({ quiet: true });
 }
+
+// Decided after .env has been read, so a `.env` that sets NODE_ENV=test cannot
+// switch the guard off by being read first.
+const isTestMode = underTestRunner || process.env.NODE_ENV === "test";
 
 if (isTestMode) {
   // Thrown (not process.exit) so the reasons show up as the test file's failure.

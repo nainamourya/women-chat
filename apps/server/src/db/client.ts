@@ -13,15 +13,21 @@ export const db = drizzle(queryClient, { schema });
 // this is unit-testable against a deliberately-unreachable instance without
 // touching the real connection — see client.test.ts.
 export async function pingDb(client: PostgresClient = queryClient, timeoutMs = 2000): Promise<boolean> {
+  // Cleared in `finally` — see pingRedis for why.
+  let timer: ReturnType<typeof setTimeout> | undefined;
   try {
     await Promise.race([
       client`select 1`,
-      new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Postgres ping timed out")), timeoutMs)),
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error("Postgres ping timed out")), timeoutMs);
+      }),
     ]);
     return true;
   } catch (err) {
     console.error("Postgres health check failed:", err);
     return false;
+  } finally {
+    clearTimeout(timer);
   }
 }
 
