@@ -1,6 +1,6 @@
 import { and, asc, eq, ilike, or, sql } from "drizzle-orm";
 import { db } from "../../db/client.js";
-import { follows, posts, userProfiles, users } from "../../db/schema.js";
+import { blocks, follows, posts, userProfiles, users } from "../../db/schema.js";
 import { AuthError } from "../auth.service.js";
 import { findVisibleMemberByUsername, loadViewer, notBlockedWith, toUserCard, visibleMember, type UserCard } from "./access.js";
 import { sanitizeImage } from "./imageSanitizer.js";
@@ -162,6 +162,21 @@ export async function removeOwnAvatar(viewerId: string): Promise<OwnProfile> {
 }
 
 export type UserListItem = UserCard & { isFollowing: boolean; isSelf: boolean };
+
+// The members the viewer has blocked, so they can be unblocked. Deliberately
+// only the viewer's OWN blocks: who has blocked the viewer is never revealed.
+// A blocked member is not otherwise reachable (their profile is a 404), so this
+// list is the only place an unblock can happen.
+export async function listBlockedMembers(viewerId: string): Promise<UserCard[]> {
+  await loadViewer(viewerId, { needsUsername: false });
+  const rows = await db
+    .select({ username: users.username, displayName: users.displayName, avatarKey: users.avatarKey })
+    .from(blocks)
+    .innerJoin(users, eq(users.id, blocks.blockedUserId))
+    .where(eq(blocks.blockerUserId, viewerId))
+    .orderBy(asc(users.username));
+  return rows.filter((row) => row.username !== null).map((row) => toUserCard(row));
+}
 
 // Discover members by username or display name. Returns the first page only,
 // ordered alphabetically; requires at least two characters so it cannot be

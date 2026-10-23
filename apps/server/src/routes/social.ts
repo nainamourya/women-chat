@@ -40,6 +40,7 @@ import {
 import {
   getOwnProfile,
   getProfileByUsername,
+  listBlockedMembers,
   removeOwnAvatar,
   searchMembers,
   setOwnAvatar,
@@ -317,6 +318,8 @@ socialRouter.post("/users/:username/block", limit("block", 30, 3600), handler(as
   await blockUser(me.id, target);
   res.json({ blocked: true });
 }));
+
+socialRouter.get("/blocked", handler(async (req, res) => res.json({ users: await listBlockedMembers(viewer(req)) })));
 
 socialRouter.delete("/users/:username/block", handler(async (req, res) => {
   const me = await loadViewer(viewer(req));

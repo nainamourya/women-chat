@@ -854,6 +854,23 @@ describe("10/11. blocking", () => {
     expect((await call(a, "POST", "/users/nobody_zz/block")).status).toBe(404);
   });
 
+  it("lists only the members the viewer blocked, so they can be unblocked", async () => {
+    const a = await member();
+    const b = await member();
+    const c = await member();
+    await call(a, "POST", `/users/${b.username}/block`);
+    await call(c, "POST", `/users/${a.username}/block`);
+
+    const mine = await call(a, "GET", "/blocked");
+    expect(mine.body.users.map((u: { username: string }) => u.username)).toEqual([b.username]);
+    // c blocked a, but a is never told that.
+    expect((await call(c, "GET", "/blocked")).body.users.map((u: { username: string }) => u.username)).toEqual([a.username]);
+    expect(JSON.stringify(mine.body)).not.toContain(c.username!);
+
+    await call(a, "DELETE", `/users/${b.username}/block`);
+    expect((await call(a, "GET", "/blocked")).body.users).toEqual([]);
+  });
+
   it("hides a blocked member's comments and likes-based notifications from the viewer", async () => {
     const owner = await member();
     const troll = await member();
