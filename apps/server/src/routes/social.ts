@@ -232,17 +232,21 @@ socialRouter.delete("/comments/:id", handler(async (req, res) => {
 
 // --- Media (authenticated; the bucket is never public) ----------------------
 
-function sendImage(res: Response, image: { bytes: Buffer; mimeType: string }, immutable: boolean) {
+// Images are private to signed-in members and may be removed at any time (a
+// post deleted, a member blocked or deleted), so browsers may keep them for an
+// hour at most — long enough to be fast, short enough that a removal takes
+// effect soon.
+function sendImage(res: Response, image: { bytes: Buffer; mimeType: string }) {
   res.setHeader("Content-Type", image.mimeType);
   res.setHeader("Content-Length", String(image.bytes.length));
   res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("Content-Security-Policy", "default-src 'none'; sandbox");
-  res.setHeader("Cache-Control", immutable ? "private, max-age=86400, immutable" : "private, max-age=300");
+  res.setHeader("Cache-Control", "private, max-age=3600");
   res.status(200).end(image.bytes);
 }
 
-socialRouter.get("/media/posts/:id", handler(async (req, res) => sendImage(res, await readPostImage(viewer(req), idParam(req)), true)));
-socialRouter.get("/media/avatars/:username", handler(async (req, res) => sendImage(res, await readAvatarImage(viewer(req), username(req)), true)));
+socialRouter.get("/media/posts/:id", handler(async (req, res) => sendImage(res, await readPostImage(viewer(req), idParam(req)))));
+socialRouter.get("/media/avatars/:username", handler(async (req, res) => sendImage(res, await readAvatarImage(viewer(req), username(req)))));
 
 // --- Messaging ---------------------------------------------------------------
 

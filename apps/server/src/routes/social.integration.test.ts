@@ -295,7 +295,9 @@ describe("4. posts and media", () => {
     expect(image.status).toBe(200);
     expect(image.headers.get("content-type")).toBe("image/jpeg");
     expect(image.headers.get("x-content-type-options")).toBe("nosniff");
-    expect(image.headers.get("cache-control")).toMatch(/^private/);
+    // Private, and short-lived so that a removal takes effect soon.
+    expect(image.headers.get("cache-control")).toBe("private, max-age=3600");
+    expect(image.headers.get("cache-control")).not.toMatch(/immutable/);
   });
 
   it("removes embedded location metadata before storing the image", async () => {
