@@ -2,6 +2,12 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import type { AccountStatus, VerificationStatus } from "@/types/next-auth";
+import { isAccountDeleted } from "@/lib/accountStatus";
+
+// How often a signed-in session is re-checked against the server for account
+// deletion. A deleted member's other devices lose access within this window,
+// without an extra server call on every request.
+const ACCOUNT_RECHECK_MS = 60_000;
 
 // Auth.js holds no direct database connection. Credential and Google account
 // checks are both delegated to the Express API (the single owner of the
@@ -138,7 +144,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         return false;
       }
     },
-    jwt({ token, user, trigger, session }) {
+    async jwt({ token, user, trigger, session }) {
       if (user) {
         token.id = user.id;
         token.verificationStatus = user.verificationStatus;
@@ -155,6 +161,17 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       }
       if (trigger === "update" && session?.ageConfirmed18) {
         token.ageConfirmed18 = session.ageConfirmed18;
+      }
+
+      // End the session of an account that has since been deleted (including
+      // from another device). Checked at most once per ACCOUNT_RECHECK_MS, and
+      // fails open if the server can't be reached — see accountStatus.ts.
+      if (token.id) {
+        const lastChecked = typeof token.accountCheckedAt === "number" ? token.accountCheckedAt : 0;
+        if (Date.now() - lastChecked > ACCOUNT_RECHECK_MS) {
+          token.accountCheckedAt = Date.now();
+          if (await isAccountDeleted(token.id)) return null;
+        }
       }
       return token;
     },

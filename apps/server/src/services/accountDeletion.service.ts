@@ -165,6 +165,10 @@ export async function deleteAccount(userId: string): Promise<{ alreadyDeleted: b
         // Frees the handle and removes the public photo reference.
         username: null,
         avatarKey: null,
+        // A deleted account must not keep any privilege: an old session of a
+        // deleted admin would otherwise still pass the role check.
+        role: "user",
+        suspendedUntil: null,
         accountStatus: "deleted",
         // No dedicated deletedAt column — accountStatus === "deleted" is the
         // sole source of truth everywhere this is checked (assertAccountActive,

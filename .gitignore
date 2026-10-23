@@ -24,15 +24,3 @@ npm-debug.log*
 .DS_Store
 Thumbs.db
 
-# Paused account-deletion endpoint + UI — intentionally excluded from the current
-# release (see commit "Exclude paused account-deletion work from this
-# release"). These files are kept on disk for when that work resumes; this
-# entry just stops them from being accidentally re-staged (e.g. via an
-# editor's "Stage All Changes") and breaking the build again in the
-# meantime. The service, its tests and migration 0009 are tracked (schema now
-# includes "deleted"); the endpoint and web pieces below stay paused until the
-# delete-account flow is wired up and reviewed.
-apps/server/src/routes/account.ts
-apps/web/src/app/api/account/route.ts
-apps/web/src/lib/accountStatus.ts
-apps/web/src/lib/accountStatus.test.ts

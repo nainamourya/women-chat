@@ -1,5 +1,8 @@
+import { eq } from "drizzle-orm";
 import { Router } from "express";
 import { z } from "zod";
+import { db } from "../db/client.js";
+import { users } from "../db/schema.js";
 import {
   AuthError,
   confirmAge18,
@@ -134,6 +137,16 @@ authRouter.post("/oauth/google", async (req, res) => {
 
 const confirmAgeSchema = z.object({
   userId: z.string().uuid(),
+});
+
+// Lets the web app drop the session of an account that has been deleted (or
+// removed by an admin) instead of trusting a signed token for its full
+// lifetime. A member who no longer exists is reported as deleted.
+authRouter.get("/account-status/:userId", async (req, res) => {
+  const parsed = z.string().uuid().safeParse(req.params.userId);
+  if (!parsed.success) return res.status(400).json({ error: "Invalid user id." });
+  const row = await db.query.users.findFirst({ where: eq(users.id, parsed.data), columns: { accountStatus: true } });
+  res.status(200).json({ accountStatus: row?.accountStatus ?? "deleted" });
 });
 
 authRouter.post("/confirm-age", async (req, res) => {

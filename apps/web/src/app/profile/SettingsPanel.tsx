@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Card } from "@/components/ui/Card";
+import { DeleteAccountSection } from "./DeleteAccountSection";
 import { Badge } from "@/components/ui/Badge";
 import { AppearanceSettings } from "./AppearanceSettings";
 import type { AccountStatus, VerificationStatus } from "@/types/next-auth";
@@ -86,6 +87,8 @@ export function SettingsPanel({
       </div>
 
       <AppearanceSettings />
+
+      <DeleteAccountSection />
 
       {verificationStatus !== "verified" && (
         <p className="mt-4 text-sm text-muted">

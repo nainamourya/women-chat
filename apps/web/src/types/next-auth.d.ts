@@ -36,5 +36,7 @@ declare module "@auth/core/jwt" {
     ageConfirmed18: boolean;
     accountStatus: AccountStatus;
     suspendedUntil: string | null;
+    // When this session was last checked against the server for account deletion.
+    accountCheckedAt?: number;
   }
 }
