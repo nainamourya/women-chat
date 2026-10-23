@@ -44,19 +44,34 @@ export default function PrivacyPage() {
             <strong>Age confirmation:</strong> that you confirmed you are 18 or older at sign-up.
           </li>
           <li>
-            <strong>Profile (optional):</strong> a short bio and the interests you choose.
+            <strong>Profile:</strong> your username, an optional bio and profile photo, and the interests you
+            choose.
+          </li>
+          <li>
+            <strong>Posts and activity:</strong> the photos and captions you post, your comments, the posts
+            you like, and who you follow and who follows you. When you upload a photo we remove the location
+            and camera details stored inside the file.
+          </li>
+          <li>
+            <strong>Private messages:</strong> the text messages, and any posts you share, that you send to
+            members who follow you back, with the time they were sent and whether they have been read.
+          </li>
+          <li>
+            <strong>Notifications:</strong> a record of new followers, likes, comments and messages
+            addressed to you, and whether you have opened them.
           </li>
           <li>
             <strong>Eligibility video:</strong> a short introduction video you upload, plus the review
             decision and, if rejected, a standard reason category.
           </li>
           <li>
-            <strong>Matches and messages:</strong> who you were matched with and when, and the text
-            messages you send in a chat.
+            <strong>Random matches:</strong> who you were matched with and when, and the text messages you
+            send in that chat.
           </li>
           <li>
             <strong>Reports and blocks:</strong> who you reported or blocked and when; for reports, the
-            reason, any description you write, and an optional image (JPEG, PNG or WebP, up to 5&nbsp;MB).
+            reason, any description you write, the post it is about (if any), and an optional image (JPEG,
+            PNG or WebP, up to 5&nbsp;MB).
           </li>
           <li>
             <strong>Technical data:</strong> your IP address, used for security and rate limiting; a
@@ -77,6 +92,7 @@ export default function PrivacyPage() {
           <li>To create and secure your account and sign you in.</li>
           <li>To review eligibility and decide who can be matched.</li>
           <li>To pair you with another member, run the chat and video call, and keep the conversation going if you reconnect.</li>
+          <li>To run profiles, posts, the home feed, comments, likes, following and notifications, and to deliver private messages between members who follow each other.</li>
           <li>To handle reports and blocks, enforce our rules, and prevent abuse and spam.</li>
           <li>To keep the service working and respond to your questions.</li>
         </LegalList>
@@ -91,11 +107,32 @@ export default function PrivacyPage() {
 
       <LegalSection title="What other members can see">
         <LegalList>
-          <li>When you are matched, the other member sees your display name and your bio (if you wrote one).</li>
-          <li>They see and hear you during a call and can read the messages you send them.</li>
           <li>
-            Your email address, interests, eligibility video and other profile details are not shown to
-            other members.
+            <strong>On GiiGirl:</strong> your username, display name, bio, profile photo, your numbers of
+            posts, followers and following, your posts and photos, your comments, whether you liked a post,
+            and the lists of who follows you and whom you follow are visible to other signed-in members whose
+            eligibility has been verified. A member who has blocked you, or whom you have blocked, cannot see
+            them.
+          </li>
+          <li>
+            People who are not signed in cannot see your profile or posts, and photos are not available at
+            public web addresses. Anyone who can see a photo could still save it or take a screenshot.
+          </li>
+          <li>
+            Following needs no approval, and there are no private accounts at the moment. You cannot hide
+            your profile from verified members other than by blocking them.
+          </li>
+          <li>
+            <strong>Private messages</strong> can be read by you and the person you are writing to. They are
+            not shown to other members.
+          </li>
+          <li>
+            <strong>In a random match,</strong> the other member sees your display name and your bio (if you
+            wrote one), sees and hears you during a call, and can read the messages you send them.
+          </li>
+          <li>
+            Your email address, interests, eligibility video and notifications are not shown to other
+            members.
           </li>
           <li>
             To connect a call, devices exchange network addresses, so the person you are talking to could
@@ -110,7 +147,7 @@ export default function PrivacyPage() {
           data on our behalf:
         </p>
         <LegalList>
-          <li>Cloudflare R2, for private storage of eligibility videos until they are reviewed and deleted.</li>
+          <li>Cloudflare R2, for private storage of eligibility videos until they are reviewed and deleted, and of profile photos and post images while they are on GiiGirl.</li>
           <li>Google, if you choose Google sign-in, and for network-connection (STUN) help during calls.</li>
           <li>A relay (TURN) provider, when a direct video connection is not possible, so call media may pass through it.</li>
           <li>Hosting, database and caching providers that store account data, messages and short-lived queue data.</li>
@@ -137,24 +174,45 @@ export default function PrivacyPage() {
             <strong>Account and profile:</strong> kept while your account exists.
           </li>
           <li>
-            <strong>Messages, matches, reports and moderation records:</strong> currently kept until the
-            account is removed; there is no automatic deletion schedule yet.
+            <strong>Posts, photos, comments, likes and follows:</strong> kept until you delete them, or until
+            you delete your account. There is no automatic expiry.
+          </li>
+          <li>
+            <strong>Private messages:</strong> kept in the conversation until the account of the member who
+            sent them is deleted; there is no automatic deletion schedule. Messages you send remain in the
+            other person&apos;s conversation after you delete your account, with their text replaced.
+          </li>
+          <li>
+            <strong>Match chat messages, matches, reports and moderation records:</strong> there is no
+            automatic deletion schedule. When an account is deleted its match chat messages are replaced,
+            and reports about it that led to a moderation decision are kept.
           </li>
         </LegalList>
         <p>
           <Confirm>
-            retention periods for chat messages, reports, report images and moderation records, and for
-            backups. No period has been decided
+            retention periods for private messages, chat messages, reports, report images and moderation
+            records, and for backups. No period has been decided
           </Confirm>
         </p>
       </LegalSection>
 
       <LegalSection title="Your choices">
         <LegalList>
-          <li>You can edit your display name, bio and interests in your profile.</li>
-          <li>You can block members and end any chat or call at any time.</li>
+          <li>You can edit your username, display name, bio, profile photo and interests in your profile.</li>
+          <li>You can delete your own posts and comments, remove your likes, and unfollow members.</li>
+          <li>You can block members, report members and posts, and end any chat or call at any time.</li>
           <li>
-            You can ask us to correct or delete your data.{" "}
+            <strong>You can delete your account</strong> in Profile &rarr; Settings &rarr; Delete account.
+            You confirm by typing a word and, if your account has a password, entering it. Deleting removes
+            your username, profile photo, bio and interests, your posts and photos, comments, likes, follows,
+            notifications, blocks, and any eligibility submission and video. Your email address and name are
+            replaced with placeholders, your password is removed, and you are signed out and taken out of
+            matchmaking. The messages you sent stay in other people&apos;s conversations with their text
+            replaced, and reports about you that led to a moderation decision are kept. A placeholder
+            account record remains so that moderation records stay consistent.
+          </li>
+          <li>
+            You can ask us to correct your data.{" "}
             <Confirm>
               how such requests are made and handled: which contact or inbox, how identity is checked, and
               how quickly we respond. No process has been confirmed yet
@@ -163,23 +221,28 @@ export default function PrivacyPage() {
         </LegalList>
         <p>
           <Confirm>
-            the account-deletion process and timeline (an in-app delete option does not exist yet), what
-            happens to messages you sent and to reports about you, and which legal rights you will describe
-            (access, correction, erasure, objection, complaint to a regulator)
+            how long deleted data may remain in backups, how deletion requests from people who cannot sign
+            in are handled, and which legal rights you will describe (access, correction, erasure,
+            objection, complaint to a regulator)
           </Confirm>
         </p>
       </LegalSection>
 
       <LegalSection title="Security">
         <p>
-          We use measures such as hashed passwords, private storage for eligibility videos, access controls
-          for our review team, and rate limiting against abuse. No online service is perfectly secure, so we
-          cannot guarantee absolute security.
+          We use measures such as hashed passwords, private storage for eligibility videos, profile photos
+          and post images, access controls for our review team, and rate limiting against abuse. Photos and
+          videos are not available at public web addresses.
+        </p>
+        <p>
+          Private messages and posts are stored in our database in readable form. They are{" "}
+          <strong>not end-to-end encrypted</strong>. No online service is perfectly secure, so we cannot
+          guarantee absolute security.
         </p>
         <p>
           <Confirm>
-            whether team members can read chat message content when handling a report, and your process for
-            notifying members after a data breach
+            whether team members can read private message content when handling a report, and your process
+            for notifying members after a data breach
           </Confirm>
         </p>
       </LegalSection>

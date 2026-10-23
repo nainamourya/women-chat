@@ -39,7 +39,8 @@ export default function GuidelinesPage() {
 
       <LegalSection title="Keep it appropriate">
         <LegalList>
-          <li>No nudity, sexual behaviour or sexually explicit talk on camera or in chat.</li>
+          <li>No nudity, sexual behaviour or sexually explicit talk on camera, in photos or captions, or in comments and messages.</li>
+          <li>Only post photos you have the right to share. Do not post photos or personal details of other people without their consent.</li>
           <li>No illegal content or activity.</li>
           <li>No spam, advertising, scams or asking people for money.</li>
         </LegalList>
@@ -62,10 +63,12 @@ export default function GuidelinesPage() {
 
       <LegalSection title="Reporting and blocking">
         <p>
-          You can end a call or chat, move on with &ldquo;Not for me&rdquo;, block someone so you are never
-          matched again, or report them. Reports can be about harassment, sexual or inappropriate behaviour,
-          someone who does not seem eligible, a fake profile, spam or scams, threatening or unsafe behaviour,
-          or something else. You can add a description and an image if it helps.
+          You can end a call or chat, move on with &ldquo;Not for me&rdquo;, unfollow someone, block them, or
+          report them. Blocking someone removes any follows between you, and they can no longer see your
+          profile or posts, follow you or message you. You can report a member or a single post. Reports can
+          be about harassment, sexual or inappropriate behaviour, someone who does not seem eligible, a fake
+          profile, spam or scams, threatening or unsafe behaviour, or something else. You can add a
+          description.
         </p>
         <p>
           Do not make reports that are knowingly false, malicious or abusive. Reports made honestly and in
