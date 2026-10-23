@@ -71,6 +71,13 @@
       "when": 1792252768130,
       "tag": "0009_free_shape",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1792781023562,
+      "tag": "0010_social_core",
+      "breakpoints": true
     }
   ]
 }

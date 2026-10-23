@@ -75,6 +75,20 @@ describe("parseEnv — INTERNAL_API_SECRET", () => {
   });
 });
 
+describe("parseEnv — MEDIA_LOCAL_DIR (local-disk image storage)", () => {
+  it("is accepted in development", () => {
+    expect(parse({ NODE_ENV: "development", MEDIA_LOCAL_DIR: "./local-media" }).success).toBe(true);
+  });
+
+  it.each(["production", "test"])("is rejected when NODE_ENV=%s, so it can never be active there", (NODE_ENV) => {
+    expect(errorsOf({ NODE_ENV, MEDIA_LOCAL_DIR: "./local-media" }).join(" ")).toMatch(/MEDIA_LOCAL_DIR is only allowed when NODE_ENV=development/);
+  });
+
+  it("is optional", () => {
+    expect(parse({ NODE_ENV: "production" }).success).toBe(true);
+  });
+});
+
 describe("parseEnv — hosting platform", () => {
   it("refuses to start on Render unless NODE_ENV=production", () => {
     for (const NODE_ENV of ["development", "test", undefined]) {

@@ -1,7 +1,23 @@
 import { and, eq, or } from "drizzle-orm";
 import { db } from "../db/client.js";
-import { blocks, matches, messages, reports, users, verificationSubmissions } from "../db/schema.js";
+import {
+  blocks,
+  comments,
+  directMessages,
+  follows,
+  matches,
+  messages,
+  notifications,
+  postLikes,
+  posts,
+  reports,
+  userInterests,
+  userProfiles,
+  users,
+  verificationSubmissions,
+} from "../db/schema.js";
 import { AuthError } from "./auth.service.js";
+import { deleteMedia } from "./social/mediaStorage.js";
 import { deleteVerificationVideo } from "./videoStorage.js";
 
 const REDACTED_MESSAGE_CONTENT = "[message removed — sender deleted their account]";
@@ -55,6 +71,12 @@ export async function deleteAccount(userId: string): Promise<{ alreadyDeleted: b
       );
     }
   }
+
+  // Image objects for the social features. They are removed after the database
+  // commit (best effort): once no row points at an object it is unreachable, so
+  // a failed delete leaves an orphan, never exposed data.
+  const ownPosts = await db.select({ imageKey: posts.imageKey }).from(posts).where(eq(posts.authorId, userId));
+  const mediaKeys = [...ownPosts.map((p) => p.imageKey), ...(existing.avatarKey ? [existing.avatarKey] : [])];
 
   await db.transaction(async (tx) => {
     // Re-check under a row lock inside the transaction — if a concurrent
@@ -111,6 +133,24 @@ export async function deleteAccount(userId: string): Promise<{ alreadyDeleted: b
     // from R2 above, before this transaction opened.
     await tx.delete(verificationSubmissions).where(eq(verificationSubmissions.userId, userId));
 
+    // Social content. Posts go (taking their likes, comments and the
+    // notifications about them with them), as do the member's own comments,
+    // likes, follow edges in both directions and notifications either way. Their
+    // private messages stay in the other person's history, but the text is
+    // replaced, exactly like match-chat messages above.
+    await tx.delete(posts).where(eq(posts.authorId, userId));
+    await tx.delete(comments).where(eq(comments.authorId, userId));
+    await tx.delete(postLikes).where(eq(postLikes.userId, userId));
+    await tx.delete(follows).where(or(eq(follows.followerId, userId), eq(follows.followeeId, userId)));
+    await tx.delete(notifications).where(or(eq(notifications.userId, userId), eq(notifications.actorId, userId)));
+    await tx
+      .update(directMessages)
+      .set({ content: REDACTED_MESSAGE_CONTENT, postId: null })
+      .where(eq(directMessages.senderId, userId));
+    // Profile text and interests are personal data too.
+    await tx.update(userProfiles).set({ bio: null, updatedAt: new Date() }).where(eq(userProfiles.userId, userId));
+    await tx.delete(userInterests).where(eq(userInterests.userId, userId));
+
     // Anonymize rather than delete the user row (see file-level comment).
     // The tombstone email embeds this user's own id, guaranteeing it can
     // never collide with another anonymized account, and freeing the
@@ -122,6 +162,9 @@ export async function deleteAccount(userId: string): Promise<{ alreadyDeleted: b
         passwordHash: null,
         googleId: null,
         displayName: "Deleted user",
+        // Frees the handle and removes the public photo reference.
+        username: null,
+        avatarKey: null,
         accountStatus: "deleted",
         // No dedicated deletedAt column — accountStatus === "deleted" is the
         // sole source of truth everywhere this is checked (assertAccountActive,
@@ -132,6 +175,8 @@ export async function deleteAccount(userId: string): Promise<{ alreadyDeleted: b
       })
       .where(eq(users.id, userId));
   });
+
+  await Promise.all(mediaKeys.map((key) => deleteMedia(key)));
 
   return { alreadyDeleted: false };
 }

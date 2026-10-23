@@ -1,4 +1,4 @@
-import { and, desc, eq, gt } from "drizzle-orm";
+import { and, desc, eq, gt, isNull } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { db } from "../db/client.js";
 import { reports, users, type Report } from "../db/schema.js";
@@ -66,6 +66,8 @@ export async function createReport(input: {
   reason: ReportReason;
   description?: string | null;
   matchId?: string | null;
+  // The post being reported, when the report is about a post.
+  postId?: string | null;
   evidenceBase64?: string | null;
   evidenceMimeType?: string | null;
 }): Promise<Report> {
@@ -82,6 +84,9 @@ export async function createReport(input: {
     where: and(
       eq(reports.reporterUserId, input.reporterUserId),
       eq(reports.reportedUserId, input.reportedUserId),
+      // A report about a specific post is a different report from one about
+      // the member in general, so each is de-duplicated on its own.
+      input.postId ? eq(reports.postId, input.postId) : isNull(reports.postId),
       gt(reports.createdAt, new Date(Date.now() - DUPLICATE_WINDOW_MS)),
     ),
   });
@@ -105,6 +110,7 @@ export async function createReport(input: {
       reporterUserId: input.reporterUserId,
       reportedUserId: input.reportedUserId,
       matchId: input.matchId ?? null,
+      postId: input.postId ?? null,
       reason: input.reason,
       description: input.description?.trim() || null,
       evidencePath,

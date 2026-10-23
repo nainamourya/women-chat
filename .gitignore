@@ -7,6 +7,8 @@ build/
 # Local-disk prototype storage for user-submitted report evidence images —
 # never committed, see apps/server/src/services/evidenceStorage.ts
 apps/server/uploads/
+# Local-development image storage (MEDIA_LOCAL_DIR) — never committed.
+apps/server/local-media/
 
 .env
 .env.local

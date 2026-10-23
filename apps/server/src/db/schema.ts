@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, boolean, timestamp, pgEnum, primaryKey, index, unique, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, boolean, timestamp, pgEnum, primaryKey, index, unique, uniqueIndex, check } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
 // Vendor-agnostic verification status. MVP sets this via a manual/stub flow only.
@@ -33,6 +33,15 @@ export const users = pgTable("users", {
   passwordHash: text("password_hash"),
   displayName: text("display_name").notNull(),
 
+  // Public handle for the social features. Always stored lowercase (the check
+  // constraint below enforces it), so the plain unique constraint is
+  // case-insensitive. Null until the member chooses one; social actions
+  // require it. Cleared when an account is deleted so the handle is freed.
+  username: text("username").unique(),
+  // Object key (not a URL) of the profile photo in private storage — served
+  // only through the authenticated media route. Null = no photo.
+  avatarKey: text("avatar_key"),
+
   // Google account identifier (OIDC `sub`), used only to find/link an
   // existing account by email and to recognize repeat Google sign-ins. Never
   // used as an authentication secret. No Google tokens are stored.
@@ -56,7 +65,16 @@ export const users = pgTable("users", {
   suspendedUntil: timestamp("suspended_until", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-});
+},
+(table) => [
+  // Lowercase letters, digits, "_" and "." only, 3-30 chars, no leading,
+  // trailing or doubled "." — mirrored by the validation in
+  // services/social/validation.ts so users get a friendly message first.
+  check(
+    "users_username_format",
+    sql`${table.username} is null or (${table.username} ~ '^[a-z0-9_]([a-z0-9_.]{1,28})[a-z0-9_]$' and ${table.username} !~ '[.][.]')`,
+  ),
+]);
 
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
@@ -202,6 +220,9 @@ export const reports = pgTable(
     // context during review. Never cascaded: a report must outlive the
     // match row it references.
     matchId: uuid("match_id").references(() => matches.id),
+    // The post this report is about, if any. SET NULL (not cascade) so the
+    // report survives the author deleting the post.
+    postId: uuid("post_id").references(() => posts.id, { onDelete: "set null" }),
 
     reason: reportReasonEnum("reason").notNull(),
     description: text("description"),
@@ -323,3 +344,187 @@ export const verificationSubmissions = pgTable(
 
 export type VerificationSubmission = typeof verificationSubmissions.$inferSelect;
 export type NewVerificationSubmission = typeof verificationSubmissions.$inferInsert;
+
+// ---------------------------------------------------------------------------
+// Social features: follows, posts, likes, comments, direct messages and
+// notifications. Every table below keys off `users.id` and cascades on user
+// removal; the soft "deleted" account state is handled in
+// services/accountDeletion.service.ts.
+// ---------------------------------------------------------------------------
+
+// A directed follow edge: `followerId` follows `followeeId`. The composite
+// primary key is the uniqueness guarantee (no duplicate follows) and the
+// check constraint is the no-self-follow guarantee, both enforced by the
+// database regardless of what the application does.
+export const follows = pgTable(
+  "follows",
+  {
+    followerId: uuid("follower_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    followeeId: uuid("followee_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.followerId, table.followeeId] }),
+    // "Who follows X" (followers list, follower count) and the mutual check.
+    index("follows_followee_created_idx").on(table.followeeId, table.createdAt, table.followerId),
+    check("follows_no_self_follow", sql`${table.followerId} <> ${table.followeeId}`),
+  ],
+);
+
+export type Follow = typeof follows.$inferSelect;
+
+export const posts = pgTable(
+  "posts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    authorId: uuid("author_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    caption: text("caption").notNull().default(""),
+    // Object key in private storage (never a URL, never client-supplied).
+    imageKey: text("image_key").notNull(),
+    imageMimeType: text("image_mime_type").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    // Profile grids and the feed both page by (created_at desc, id desc).
+    index("posts_author_created_idx").on(table.authorId, table.createdAt, table.id),
+    check("posts_caption_length", sql`char_length(${table.caption}) <= 2200`),
+  ],
+);
+
+export type Post = typeof posts.$inferSelect;
+
+export const postLikes = pgTable(
+  "post_likes",
+  {
+    postId: uuid("post_id")
+      .notNull()
+      .references(() => posts.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  // The primary key makes a duplicate like impossible at the database level.
+  (table) => [primaryKey({ columns: [table.postId, table.userId] }), index("post_likes_user_idx").on(table.userId)],
+);
+
+export const comments = pgTable(
+  "comments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    postId: uuid("post_id")
+      .notNull()
+      .references(() => posts.id, { onDelete: "cascade" }),
+    authorId: uuid("author_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    content: text("content").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("comments_post_created_idx").on(table.postId, table.createdAt, table.id),
+    index("comments_author_idx").on(table.authorId),
+    check("comments_content_length", sql`char_length(btrim(${table.content})) between 1 and 1000`),
+  ],
+);
+
+export type Comment = typeof comments.$inferSelect;
+
+// A private conversation between exactly two members. The pair is stored in a
+// canonical order (user_a_id < user_b_id) so one pair can only ever have one
+// row; the unique constraint and the ordering check are both in the database.
+// Whether the two may currently exchange messages is NOT stored — it is
+// re-derived from `follows` and `blocks` on every send (see
+// services/social/messages.service.ts), so an old conversation can never
+// outlive the relationship that allowed it.
+export const conversations = pgTable(
+  "conversations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userAId: uuid("user_a_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    userBId: uuid("user_b_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    lastMessageAt: timestamp("last_message_at", { withTimezone: true }).notNull().defaultNow(),
+    // Read markers per participant; unread = messages from the other user
+    // newer than the participant's marker.
+    userALastReadAt: timestamp("user_a_last_read_at", { withTimezone: true }),
+    userBLastReadAt: timestamp("user_b_last_read_at", { withTimezone: true }),
+  },
+  (table) => [
+    unique("conversations_pair_unique").on(table.userAId, table.userBId),
+    index("conversations_user_a_last_idx").on(table.userAId, table.lastMessageAt),
+    index("conversations_user_b_last_idx").on(table.userBId, table.lastMessageAt),
+    check("conversations_pair_order", sql`${table.userAId} < ${table.userBId}`),
+  ],
+);
+
+export type Conversation = typeof conversations.$inferSelect;
+
+export const directMessages = pgTable(
+  "direct_messages",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    conversationId: uuid("conversation_id")
+      .notNull()
+      .references(() => conversations.id, { onDelete: "cascade" }),
+    senderId: uuid("sender_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    // May be empty only when the message shares a post.
+    content: text("content").notNull().default(""),
+    // A post shared into the conversation. SET NULL so deleting the post does
+    // not delete the conversation history.
+    postId: uuid("post_id").references(() => posts.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("direct_messages_conversation_created_idx").on(table.conversationId, table.createdAt, table.id),
+    check("direct_messages_content_length", sql`char_length(${table.content}) <= 2000`),
+  ],
+);
+
+export type DirectMessage = typeof directMessages.$inferSelect;
+
+export const notificationTypeEnum = pgEnum("notification_type", ["follow", "like", "comment", "message"]);
+
+export const notifications = pgTable(
+  "notifications",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    // Who receives it, and who caused it.
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    actorId: uuid("actor_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    type: notificationTypeEnum("type").notNull(),
+    postId: uuid("post_id").references(() => posts.id, { onDelete: "cascade" }),
+    commentId: uuid("comment_id").references(() => comments.id, { onDelete: "cascade" }),
+    conversationId: uuid("conversation_id").references(() => conversations.id, { onDelete: "cascade" }),
+    // Deterministic per event ("like:<actor>:<post>", "comment:<id>",
+    // "follow:<actor>", "message:<conversation>") so a retried request cannot
+    // create a duplicate: the unique index below turns it into a no-op (or,
+    // for messages, a refresh of the existing row).
+    dedupeKey: text("dedupe_key").notNull(),
+    readAt: timestamp("read_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("notifications_user_dedupe_unique").on(table.userId, table.dedupeKey),
+    index("notifications_user_created_idx").on(table.userId, table.createdAt, table.id),
+    index("notifications_user_unread_idx").on(table.userId).where(sql`${table.readAt} is null`),
+  ],
+);
+
+export type Notification = typeof notifications.$inferSelect;

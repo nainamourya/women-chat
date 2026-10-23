@@ -92,9 +92,22 @@ export const envSchema = z
     R2_BUCKET_NAME: z.string().min(1, "R2_BUCKET_NAME is required"),
     R2_ACCESS_KEY_ID: z.string().min(1, "R2_ACCESS_KEY_ID is required"),
     R2_SECRET_ACCESS_KEY: z.string().min(1, "R2_SECRET_ACCESS_KEY is required"),
+
+    // Local development only: store profile/post images in this directory
+    // instead of R2 (see services/social/mediaStorage.ts). Rejected in every
+    // other NODE_ENV by the refinement below, so it cannot be active in
+    // production.
+    MEDIA_LOCAL_DIR: z.string().min(1).optional(),
   })
   .superRefine((value, ctx) => {
     // Messages below never include the offending value — they end up in logs.
+    if (value.MEDIA_LOCAL_DIR && value.NODE_ENV !== "development") {
+      ctx.addIssue({
+        code: "custom",
+        path: ["MEDIA_LOCAL_DIR"],
+        message: "MEDIA_LOCAL_DIR is only allowed when NODE_ENV=development",
+      });
+    }
     if (value.NODE_ENV === "production") {
       const secret = value.INTERNAL_API_SECRET;
       if (secret.length < PRODUCTION_INTERNAL_SECRET_MIN_LENGTH) {

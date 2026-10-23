@@ -4,6 +4,7 @@ import { createServer } from "node:http";
 import { env, CORS_ORIGINS } from "./config/env.js";
 import { authRouter } from "./routes/auth.js";
 import { verificationRouter } from "./routes/verification.js";
+import { socialRouter } from "./routes/social.js";
 import { profileRouter } from "./routes/profile.js";
 import { interestsRouter } from "./routes/interests.js";
 import { matchmakingRouter } from "./routes/matchmaking.js";
@@ -58,6 +59,7 @@ app.use("/api/health", healthRouter);
 
 app.use("/api/auth", authRouter);
 app.use("/api/verification", verificationRouter);
+app.use("/api/social", socialRouter);
 app.use("/api/profile", profileRouter);
 app.use("/api/interests", interestsRouter);
 app.use("/api/matchmaking", matchmakingRouter);
