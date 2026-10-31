@@ -1,9 +1,16 @@
 {
   // Placeholder-only configuration. Nothing here identifies a real Cloudflare
-  // account, Hyperdrive config, domain or secret. Stage A is local-only: it is
-  // never deployed.
+  // account, Hyperdrive config, domain or secret. Nothing is deployed from this
+  // branch yet.
   "name": "giigirl-edge",
-  "main": "src/index.ts",
+  // Built by scripts/build.mjs: the Worker entry plus the Express server's
+  // routers/services it reuses (with the db/env/socket modules swapped for
+  // Worker-safe versions). wrangler then bundles the npm packages.
+  "main": "dist/worker.mjs",
+  "build": {
+    "command": "node scripts/build.mjs",
+    "watch_dir": ["src", "../server/src"]
+  },
   "compatibility_date": "2026-10-01",
   "compatibility_flags": ["nodejs_compat"],
   "hyperdrive": [
@@ -17,4 +24,8 @@
       // apps/server/src/config/testTargetGuard.ts (see test/localWorker.ts).
     }
   ]
+  // Environment variables (NODE_ENV, CORS_ORIGIN, INTERNAL_API_SECRET, the
+  // METERED_TURN_* / TURN_* settings) are intentionally not declared here: the
+  // secrets must never be committed, and the Worker fails closed (503 on every
+  // request) until they are provided. See src/config.ts.
 }

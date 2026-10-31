@@ -21,10 +21,9 @@ describe("edge Worker (Stage A) against local Docker Postgres", () => {
     expect(await res.json()).toEqual({ status: "ok", dependencies: { postgres: "ok" } });
   });
 
-  it("unknown routes return the JSON 404 shape", async () => {
+  it("unknown routes return 404 (Express's default, as on the Express server)", async () => {
     const res = await fetch(`${worker.baseUrl}/api/nope`);
     expect(res.status).toBe(404);
-    expect(await res.json()).toEqual({ error: "Not found." });
   });
 
   it("50 sequential readiness requests all succeed (no shared-client failure)", async () => {

@@ -1,6 +1,9 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import postgres from "postgres";
 import { drizzle, type PostgresJsDatabase } from "drizzle-orm/postgres-js";
+// The same schema the Express server uses, so the server's services (which use
+// the relational `db.query.*` API) behave identically when reused here.
+import * as schema from "../../server/src/db/schema";
 
 // Workers cannot share a database client across requests: a module-level
 // client keeps I/O objects bound to the request that created it, and a later
@@ -9,7 +12,8 @@ import { drizzle, type PostgresJsDatabase } from "drizzle-orm/postgres-js";
 // request's client. Code written against `db` (as the Express server's
 // `db/client.ts` export is) therefore keeps working without every importer
 // having to pass a client around.
-type RequestDb = { db: PostgresJsDatabase; client: ReturnType<typeof postgres> };
+type Database = PostgresJsDatabase<typeof schema>;
+type RequestDb = { db: Database; client: ReturnType<typeof postgres> };
 
 const requestDb = new AsyncLocalStorage<RequestDb>();
 
@@ -20,15 +24,17 @@ export interface DbEnv {
 export async function withDb<T>(env: DbEnv, fn: () => Promise<T>): Promise<T> {
   // max: 1 — Hyperdrive does the real pooling; one connection per request is
   // enough and keeps us far below the Worker's concurrent-connection limit.
+  // postgres.js connects lazily, so requests that never query (auth failures,
+  // validation errors) cost no connection.
   const client = postgres(env.HYPERDRIVE.connectionString, { max: 1 });
   try {
-    return await requestDb.run({ db: drizzle(client), client }, fn);
+    return await requestDb.run({ db: drizzle(client, { schema }), client }, fn);
   } finally {
     await client.end({ timeout: 1 });
   }
 }
 
-export const db: PostgresJsDatabase = new Proxy({} as PostgresJsDatabase, {
+export const db: Database = new Proxy({} as Database, {
   get(_target, prop) {
     const current = requestDb.getStore();
     if (!current) {

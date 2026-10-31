@@ -30,12 +30,44 @@ export function readServerTestTargets(): LocalTargets {
 
 export type RunningWorker = { baseUrl: string; stop: () => void };
 
-export async function startLocalWorker(port: number): Promise<RunningWorker> {
-  const databaseUrl = resolveLocalDatabaseUrl(readServerTestTargets());
+// Synthetic, test-only values. They are passed on the wrangler command line
+// (visible in the local process list), which is fine precisely because none of
+// them is a real secret.
+export const TEST_INTERNAL_SECRET = "edge-test-internal-secret-0123456789";
+export const TEST_ORIGIN = "http://localhost:3000";
+export const DEFAULT_TEST_VARS: Record<string, string> = {
+  NODE_ENV: "test",
+  CORS_ORIGIN: TEST_ORIGIN,
+  INTERNAL_API_SECRET: TEST_INTERNAL_SECRET,
+};
+
+export type StartOptions = {
+  // Replaces DEFAULT_TEST_VARS entirely when given (used to prove fail-closed).
+  vars?: Record<string, string>;
+  // For a Worker that is expected to answer 503 to everything: any HTTP
+  // response counts as "up".
+  anyResponseCountsAsUp?: boolean;
+  // Point the Worker at a different database. It still has to pass the same
+  // testTargetGuard (local, test-named, opted in) — used to simulate an
+  // unreachable database with a closed local port.
+  databaseUrl?: string;
+};
+
+/** The guard-validated local database URL, for tests that seed or clean rows. */
+export function guardedTestDatabaseUrl(): string {
+  return resolveLocalDatabaseUrl(readServerTestTargets());
+}
+
+export async function startLocalWorker(port: number, options: StartOptions = {}): Promise<RunningWorker> {
+  const databaseUrl = options.databaseUrl
+    ? resolveLocalDatabaseUrl({ ...readServerTestTargets(), databaseUrl: options.databaseUrl })
+    : guardedTestDatabaseUrl();
+  const vars = options.vars ?? DEFAULT_TEST_VARS;
+  const varArgs = Object.entries(vars).flatMap(([key, value]) => ["--var", `${key}:${value}`]);
 
   const child: ChildProcess = spawn(
     process.execPath,
-    [path.resolve(edgeDir, "../../node_modules/wrangler/bin/wrangler.js"), "dev", "--local", "--port", String(port), "--ip", "127.0.0.1"],
+    [path.resolve(edgeDir, "../../node_modules/wrangler/bin/wrangler.js"), "dev", "--local", "--port", String(port), "--ip", "127.0.0.1", ...varArgs],
     {
       cwd: edgeDir,
       stdio: "ignore",
@@ -53,15 +85,15 @@ export async function startLocalWorker(port: number): Promise<RunningWorker> {
   };
 
   const baseUrl = `http://127.0.0.1:${port}`;
-  for (let i = 0; i < 60; i++) {
+  for (let i = 0; i < 90; i++) {
     try {
       const res = await fetch(`${baseUrl}/api/health`, { signal: AbortSignal.timeout(2000) });
-      if (res.ok) return { baseUrl, stop };
+      if (res.ok || options.anyResponseCountsAsUp) return { baseUrl, stop };
     } catch {
       // not up yet
     }
     await new Promise((r) => setTimeout(r, 1000));
   }
   stop();
-  throw new Error("Local Worker did not become ready within 60s");
+  throw new Error("Local Worker did not become ready within 90s");
 }
