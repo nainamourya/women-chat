@@ -1,0 +1,20 @@
+{
+  // Placeholder-only configuration. Nothing here identifies a real Cloudflare
+  // account, Hyperdrive config, domain or secret. Stage A is local-only: it is
+  // never deployed.
+  "name": "giigirl-edge",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE",
+      // Placeholder id (all zeros). A real Hyperdrive config is created later,
+      // outside this stage, and its id is not committed here.
+      "id": "00000000000000000000000000000000"
+      // The local connection string is deliberately NOT written here. The test
+      // harness injects it through the environment, and only after it passes
+      // apps/server/src/config/testTargetGuard.ts (see test/localWorker.ts).
+    }
+  ]
+}
