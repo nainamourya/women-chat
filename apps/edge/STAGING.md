@@ -3,7 +3,8 @@
 Nothing in this stage was deployed. No Cloudflare login, no real resource, no
 secret value was used or is written here. `wrangler.jsonc` has an `env.staging`
 block (Worker `giigirl-edge-staging`, workers.dev only, no routes or custom
-domain) whose Hyperdrive id and R2 bucket name are **placeholders**. A
+domain) whose Hyperdrive id and R2 bucket name are the **staging-only** resources
+(`giigirl-private-staging`; the Hyperdrive id is an identifier, not a secret). A
 `wrangler deploy --env staging --dry-run` builds it and lists the bindings
 (5 Durable Objects, Hyperdrive, R2) without contacting Cloudflare.
 
@@ -12,42 +13,131 @@ Object storage is per Worker, so queues, tickets and limits start empty), its ow
 Hyperdrive config, its own bucket. **It must also use its own database** (a Neon
 branch or a separate project), never the production connection string.
 
-## Setup checklist (do these yourself; values never go in chat or in git)
+## Staging setup checklist (do these yourself; values never go in chat or git)
 
-Resources (Cloudflare dashboard or `wrangler`, on the account you choose):
-- [ ] Create a **staging** R2 bucket; put its name in `env.staging.r2_buckets`
-      (keep it private: no public access, no custom domain, no r2.dev URL).
-- [ ] Create a **staging Neon database** (a branch of production's project is
-      fine; never the production branch). Apply the migrations to it.
-- [ ] Create a **staging Hyperdrive** config pointing at that database; put its id
-      in `env.staging.hyperdrive`.
-- [ ] Review the Workers plan: Durable Objects with SQLite need the Workers Paid
-      plan for production-like use.
+Placeholders: `<staging-worker-url>` = `https://giigirl-edge-staging.<your-subdomain>.workers.dev`,
+`<staging-web-origin>` = the staging web app's exact origin (scheme + host, no path, no
+trailing slash). Run every `wrangler` command from `apps/edge` **with `--env staging`**.
+Without it a command targets the base config (the production-named Worker `giigirl-edge`),
+so a secret or deploy would land on the wrong Worker. Stop and re-check if you forget it.
 
-Secrets (`wrangler secret put <NAME> --env staging`, typed at the prompt):
-- [ ] `INTERNAL_API_SECRET` (a new random value; the same value goes in the
-      Vercel preview env below)
-- [ ] `UPLOAD_TOKEN_SECRET` (a second, different random value, 32+ characters; also
-      goes in the Vercel preview env)
-- [ ] `METERED_TURN_*` / `TURN_*` settings the server's config schema requires
-      (staging may reuse the Metered credentials or use a separate app)
-- [ ] anything else `apps/server/src/config/envSchema.ts` marks required, minus
-      `DATABASE_URL`, `REDIS_URL` and `R2_*` (the Worker does not read them)
+### A. Isolation rules (what keeps staging away from production)
 
-Plain variables for staging (`--var` or the dashboard): `NODE_ENV=production`,
-`CORS_ORIGIN=<staging web origin>`.
+| Resource | Staging must be | What guards it |
+|---|---|---|
+| Worker + Durable Objects | `giigirl-edge-staging`; Durable Object storage is per Worker, so queues, tickets, limits and socket state start empty | `env.staging.name`; `test/stagingConfig.test.ts` |
+| Database | a **separate** Neon branch/project, never the production branch | **Your check** (nothing in the repo can see the real database): before creating Hyperdrive and before running migrations, compare the staging connection string's host and database name with production's and confirm they differ |
+| Hyperdrive | its own config, pointing at the staging database | the staging Hyperdrive id in `env.staging` only (the base config keeps its own placeholder id, so a deploy without `--env staging` fails instead of reaching staging); `test/stagingConfig.test.ts` requires the two ids to differ |
+| R2 | its own private bucket, no public access, no custom domain, no r2.dev URL | `giigirl-private-staging` in `env.staging` only; `test/stagingConfig.test.ts` requires the exact name and that it differs from the base config's |
+| Secrets | new random values, never copied from production | `wrangler secret put ... --env staging` |
+| Web | a Vercel **Preview** environment, variables scoped to Preview only | **Your check**: in Vercel, confirm no variable below is also ticked for Production |
+| DNS / domains | none: workers.dev only, no routes, no custom domain on the Worker; none changed for the web app | `test/stagingConfig.test.ts` fails if the file gains a route, zone or account id |
 
-Web (a **Vercel Preview** environment, never Production):
-- [ ] `UPLOAD_TOKEN_SECRET=` the same value as the Worker's secret (a new random value,
-      at least 32 characters, different from `INTERNAL_API_SECRET`)
-- [ ] `SERVER_URL=https://giigirl-edge-staging.<subdomain>.workers.dev`
-- [ ] `NEXT_PUBLIC_SOCKET_URL=` the same URL (the browser connects with
-      `transports: ["websocket"]`)
-- [ ] `INTERNAL_API_SECRET=` the staging value from above
-- [ ] a preview database/auth config that points at the **staging** database
+Do not reuse these from production: `INTERNAL_API_SECRET`, `UPLOAD_TOKEN_SECRET`,
+`AUTH_SECRET`, the database, the Hyperdrive config, the R2 bucket. Staging may reuse the
+Metered TURN credentials (or use a separate Metered app).
 
-Deploy (needs your explicit go-ahead and your own credentials):
-`npx wrangler deploy --env staging` from `apps/edge`.
+### B. Cloudflare resources (dashboard or `wrangler`, your account)
+
+- [ ] Workers **Paid** plan (Durable Objects with SQLite storage).
+- [ ] Staging R2 bucket created (private). Put its name in `env.staging.r2_buckets[0].bucket_name`.
+- [ ] Staging Neon database created and migrated (see D). Never run migrations or tests
+      against production for this.
+- [ ] Staging Hyperdrive config created against that database. Put its id in
+      `env.staging.hyperdrive[0].id`. A Hyperdrive id is an identifier, not a secret, so the
+      staging id may be committed, in `env.staging` only. Never commit the connection string,
+      and never put a production id, bucket, route or secret in this file or in `env.staging`.
+- [ ] Durable Object bindings (`CONN`, `USER_HUB`, `TICKETS`, `LIMITER`, `MATCHMAKER`) and
+      migrations `v1`, `v2` are already in `env.staging` and applied by the first deploy.
+      Nothing to create by hand. Do not rename or remove a migrated class later.
+
+### C. Worker secrets and variables (`--env staging`)
+
+Secrets, typed at the prompt (`npx wrangler secret put <NAME> --env staging`):
+- [ ] `INTERNAL_API_SECRET`: new random value, 32+ characters
+- [ ] `UPLOAD_TOKEN_SECRET`: a second, different random value, 32+ characters. The Worker
+      refuses direct uploads (503) if it is missing, short, or equal to `INTERNAL_API_SECRET`.
+- [ ] The Metered / TURN settings `apps/server/src/config/envSchema.ts` requires
+      (`METERED_TURN_*` or `TURN_*`). The Worker ignores `DATABASE_URL`, `REDIS_URL` and `R2_*`.
+
+Plain variables (`--var` or the dashboard, for the staging Worker only):
+- [ ] `NODE_ENV=production`
+- [ ] `CORS_ORIGIN=<staging-web-origin>`: **exact match**, comma-separated if more than one.
+      No wildcard. It is used for the direct upload's CORS check, so a mismatch makes the
+      browser's upload fail.
+      Vercel gives every deployment its own URL, so use a **stable** Preview address: the
+      branch alias for the migration branch, or a staging domain you own on the web side. A
+      per-deployment URL would break CORS on every deploy.
+
+### D. Staging database
+
+- [ ] From your machine, with `DATABASE_URL` set to the **staging** connection string in
+      that shell only (never in a committed file): `npm run db:migrate -w apps/server`.
+      Re-check the host differs from production first.
+- [ ] Create a staging admin account and a test member if you want to review uploads.
+
+### E. Vercel Preview environment variables (Preview only)
+
+- [ ] `SERVER_URL=<staging-worker-url>`: also the address the **browser** is sent to for
+      video upload, so it must be the Worker's public URL.
+- [ ] `NEXT_PUBLIC_SOCKET_URL=<staging-worker-url>`: inlined at build time, so redeploy the
+      preview after changing it. The sockets connect with `transports: ["websocket"]`.
+- [ ] `INTERNAL_API_SECRET`: the same value as the staging Worker's.
+- [ ] `UPLOAD_TOKEN_SECRET`: the same value as the staging Worker's (not equal to
+      `INTERNAL_API_SECRET`).
+- [ ] `AUTH_SECRET` (new), `AUTH_URL=<staging-web-origin>`.
+- [ ] `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`: only if testing Google sign-in; add
+      `<staging-web-origin>` to that OAuth client's redirect URIs (or use a separate client).
+- [ ] Optional `NEXT_PUBLIC_ICE_TRANSPORT_POLICY`.
+- [ ] Nothing here is ticked for Production. `VERCEL=1` is set by Vercel itself (the
+      authorization address limit depends on it).
+
+### F. Deploy (only with your explicit go-ahead and your own credentials)
+
+- [ ] `npx wrangler deploy --env staging --dry-run` passes (it did locally in this stage).
+- [ ] `npx wrangler deploy --env staging`. Confirm the output names `giigirl-edge-staging`
+      on workers.dev and nothing else.
+- [ ] Deploy the web Preview with the variables above.
+
+### G. Health and readiness checks
+
+- [ ] `GET <staging-worker-url>/api/health` returns 200 `{status:"ok"}`.
+- [ ] `GET <staging-worker-url>/api/health/ready` returns 200 with `postgres: ok` and
+      `realtime: ok`. A 503 names the failing dependency (database/Hyperdrive or Durable
+      Objects). It does **not** check R2: that is covered by the upload smoke test below.
+- [ ] Any non-health request without `x-internal-api-secret` returns 401. A 503 on every
+      request means the Worker's configuration is invalid (fail closed): re-check section C.
+
+### H. Smoke tests (staging only, with test accounts)
+
+Verification upload:
+- [ ] Sign in on the preview, open the eligibility page, tick the notice, choose a short MP4
+      under 25 MB, and above 4.5 MB if you can (that is the point of the direct upload).
+- [ ] In the browser's network tab: `POST /api/verification/video/authorize` returns 200 on
+      the web origin; the video `PUT` goes to `<staging-worker-url>/api/verification/video-upload`
+      (not to Vercel), preflight `OPTIONS` returns 204, and the final response is 201.
+- [ ] The page shows "pending". Status read through the app is `pending_review`.
+- [ ] As the staging admin, review the submission and approve or reject. The video plays
+      through the admin route, and after the decision the object is gone from the **staging**
+      bucket (R2 dashboard: check the staging bucket only).
+- [ ] Failure cases: a second upload while pending is refused (409); an upload from a page
+      on a different origin is blocked by CORS; the 11th authorization within an hour
+      returns 429 with a message.
+
+WebSocket:
+- [ ] Two test accounts (verified) in two browsers: the socket connects (`wss://` to the
+      Worker, status 101, no `transport=polling` requests), both join matchmaking and match.
+- [ ] Chat messages and typing arrive both ways; a DM sent while the recipient is online
+      appears live (`dm:message`); a follow produces `notification:new`.
+- [ ] A video call connects between the two browsers, with TURN credentials from
+      `/api/ice-servers`. Hanging up and leaving the page ends the match for both.
+- [ ] Banning the test user from the admin page disconnects their live socket.
+
+### I. Teardown / rollback of staging
+
+- [ ] `npx wrangler delete --env staging` removes the staging Worker and its Durable Object
+      state; delete the staging bucket, Hyperdrive config and database branch separately.
+      None of this touches production.
 
 ## What was rehearsed, and where
 

@@ -53,8 +53,8 @@
     "staging": {
       "name": "giigirl-edge-staging",
       "workers_dev": true,
-      "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "00000000000000000000000000000000" }],
-      "r2_buckets": [{ "binding": "PRIVATE_BUCKET", "bucket_name": "giigirl-private-staging-placeholder" }],
+      "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "3a428d565fce4a59b3f30cee9ff17faa" }],
+      "r2_buckets": [{ "binding": "PRIVATE_BUCKET", "bucket_name": "giigirl-private-staging" }],
       "durable_objects": {
         "bindings": [
           { "name": "CONN", "class_name": "Conn" },
