@@ -1,7 +1,6 @@
 import express from "express";
 import cors from "cors";
-import { z } from "zod";
-import { eq, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import { getConfig } from "./config";
 import { db } from "./db";
 import { findBlocked } from "./routeCoverage";
@@ -10,23 +9,14 @@ import { findBlocked } from "./routeCoverage";
 // database client, environment and socket modules are redirected at build time
 // — see scripts/build.mjs.)
 import { requireInternalSecret } from "../../server/src/middleware/internalAuth";
-import { AuthError, assertEligible } from "../../server/src/services/auth.service";
-import { users } from "../../server/src/db/schema";
-import { checkLimitFailOpen } from "./realtime/limiter";
-import {
-  SOCKET_TICKET_LIMIT,
-  SOCKET_TICKET_TTL_MS,
-  SOCKET_TICKET_WINDOW_SECONDS,
-  getRequestContext,
-  limiterFor,
-  ticketStoreFor,
-} from "./realtime/env";
+import { getRequestContext, limiterFor } from "./realtime/env";
 import { registerTestHooks } from "./testHooks";
 import { interestsRouter } from "../../server/src/routes/interests";
 import { profileRouter } from "../../server/src/routes/profile";
 import { iceServersRouter } from "../../server/src/routes/iceServers";
 import { adminStatsRouter } from "../../server/src/routes/adminStats";
 import { adminUsersRouter } from "../../server/src/routes/adminUsers";
+import { matchmakingRouter } from "../../server/src/routes/matchmaking";
 
 export const app = express();
 
@@ -111,59 +101,6 @@ app.get("/api/health/ready", async (_req, res) => {
   });
 });
 
-// Port of POST /socket-ticket from apps/server/src/routes/matchmaking.ts: same
-// validation, same per-user limit (10 per 60 s, fail-open like the Express
-// server), same eligibility check, same status codes and bodies. Only the
-// ticket store changed (Redis -> TicketStore Durable Object). The rest of the
-// matchmaking router (join/leave/status) is not part of this stage.
-const userIdBodySchema = z.object({ userId: z.string().uuid() });
-
-app.post("/api/matchmaking/socket-ticket", requireInternalSecret, async (req, res) => {
-  const parsed = userIdBodySchema.safeParse(req.body);
-  if (!parsed.success) {
-    return res.status(400).json({ error: "Invalid user id." });
-  }
-  const { env } = getRequestContext();
-
-  const limit = await checkLimitFailOpen(
-    env,
-    `ratelimit:socket-ticket:${parsed.data.userId}`,
-    SOCKET_TICKET_LIMIT,
-    SOCKET_TICKET_WINDOW_SECONDS,
-    "socket-ticket",
-  );
-  if (!limit.allowed) {
-    // Same generic 429 as sendRateLimitedResponse in the Express server.
-    res.setHeader("Retry-After", String(Math.max(1, Math.ceil(limit.retryAfterSeconds))));
-    return res.status(429).json({ error: "Too many attempts. Please try again later." });
-  }
-
-  // Defense in depth: socket authentication checks this again on every connection.
-  try {
-    const user = await db.query.users.findFirst({ where: eq(users.id, parsed.data.userId) });
-    if (!user) {
-      return res.status(404).json({ error: "User not found." });
-    }
-    assertEligible(user);
-  } catch (err) {
-    if (err instanceof AuthError) {
-      return res.status(err.status).json({ error: err.message });
-    }
-    console.error("socket-ticket eligibility check error:", err instanceof Error ? err.name : "unknown error");
-    return res.status(500).json({ error: "Something went wrong." });
-  }
-
-  const ticket = crypto.randomUUID();
-  try {
-    await ticketStoreFor(env, ticket).mint(ticket, parsed.data.userId, SOCKET_TICKET_TTL_MS);
-  } catch {
-    // Fail closed: no ticket store means no ticket (the Express version throws here too).
-    console.error("socket-ticket mint error: ticket store unavailable");
-    return res.status(500).json({ error: "Something went wrong." });
-  }
-  res.status(200).json({ ticket });
-});
-
 registerTestHooks(app);
 
 app.use("/api/interests", interestsRouter);
@@ -171,3 +108,7 @@ app.use("/api/profile", profileRouter);
 app.use("/api/ice-servers", iceServersRouter);
 app.use("/api/admin/stats", adminStatsRouter);
 app.use("/api/admin/users", adminUsersRouter);
+// The server's own matchmaking router and service, unchanged (join, leave,
+// status, socket-ticket). Only the queue, the rate limiter and the ticket store
+// underneath were swapped for Durable Objects at build time.
+app.use("/api/matchmaking", matchmakingRouter);

@@ -1,4 +1,4 @@
-# Edge Worker route coverage (through Stage C)
+# Edge Worker route coverage (through Stage D)
 
 The Express server in `apps/server` is the reference implementation and is
 unchanged. The Worker reuses its routers and services directly; only the
@@ -26,7 +26,10 @@ Nothing is stubbed to succeed.
 | GET | /api/admin/users | List and search. |
 | PATCH | /api/admin/users/:id | Ban/suspend now drops the user's live sockets (Stage C). |
 | DELETE | /api/admin/users/:id | Deletion now drops the user's live sockets (Stage C). |
-| POST | /api/matchmaking/socket-ticket | Only this route of the matchmaking router: it is real-time transport. |
+| POST | /api/matchmaking/socket-ticket | The server's own matchmaking router (Stage D) serves this route. |
+| POST | /api/matchmaking/join | Matchmaker Durable Object replaces the Redis queue. Rules in `MATCHMAKING.md`. |
+| POST | /api/matchmaking/leave | |
+| GET | /api/matchmaking/status/:userId | Refreshes the 20 s waiting marker, as on Express. |
 
 ## Blocked (answer 501)
 
@@ -36,12 +39,11 @@ Nothing is stubbed to succeed.
 | * | /api/verification/* | Redis rate limiter import, plus verification video upload (R2, music-metadata, large bodies). | A later stage (limiter shim) and Stage E |
 | * | /api/admin/verification/* | Reads and deletes verification videos through the R2 S3 client and music-metadata. | Stage E |
 | * | /api/social/* | Redis rate limiter import, R2 media storage, image sanitising CPU. (The `dm:message` / `notification:new` push path now exists: `emitToUser` reaches the user's sockets.) | A later stage (limiter shim) and Stage E |
-| * | /api/account/* | Redis rate limiter import, matchmaking-queue removal, R2 media deletion. (Socket disconnect now works.) | Stages D and E |
-| * | /api/matchmaking/* (except socket-ticket) | Redis matchmaking queue and matchmaking rate limits (join, leave, status). | Stage D |
+| * | /api/account/* | Redis rate limiter import and R2 media deletion on account deletion. (Queue removal and socket disconnect now have Durable Object equivalents.) | A later stage (limiter shim) and Stage E |
 | * | /api/reports/* | Redis rate limiter import and evidence image storage. | A later stage (limiter shim) and Stage E |
 | * | /api/blocks/* | Imports the Redis rate limiter (`checkLimitFailOpen`); nothing else blocks it. The Durable Object limiter exists but is not wired to HTTP routes yet. | A later stage (limiter shim) |
 
 ## Not part of Stages B and C
 
-Matchmaking rules, video uploads and social features are untouched, as scoped.
+Video uploads and social features are untouched, as scoped.
 Real-time (chat, notifications, WebRTC signaling) is described in `REALTIME.md`.

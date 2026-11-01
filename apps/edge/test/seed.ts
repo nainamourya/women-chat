@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, or } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "../../server/src/db/schema";
@@ -103,6 +103,22 @@ export class Fixtures {
 
   async setStatus(userId: string, accountStatus: "active" | "banned" | "suspended") {
     await this.db.update(schema.users).set({ accountStatus }).where(eq(schema.users.id, userId));
+  }
+
+  async block(blockerUserId: string, blockedUserId: string) {
+    await this.db.insert(schema.blocks).values({ blockerUserId, blockedUserId });
+  }
+
+  async setBio(userId: string, bio: string) {
+    await this.db.insert(schema.userProfiles).values({ userId, bio });
+  }
+
+  /** Every active match this user is in — must never be more than one. */
+  async activeMatches(userId: string) {
+    return this.db
+      .select()
+      .from(schema.matches)
+      .where(and(eq(schema.matches.status, "active"), or(eq(schema.matches.userAId, userId), eq(schema.matches.userBId, userId))));
   }
 
   async cleanup() {

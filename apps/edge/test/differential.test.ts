@@ -1,8 +1,19 @@
 import type { Server } from "node:http";
 import type { AddressInfo } from "node:net";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { TEST_INTERNAL_SECRET, TEST_ORIGIN, guardedTestDatabaseUrl, readServerTestTargets, startLocalWorker, type RunningWorker } from "./localWorker";
 import { seedRows, type Seed } from "./seed";
+
+// The Express reference runs in this process without a Socket.IO server (which
+// would need its own Redis adapter and HTTP server), so its real-time pushes are
+// stubbed here — on the Express side only. Event delivery is covered by
+// realtime.test.ts and matchmaking.test.ts against the Worker.
+vi.mock("../../server/src/socket/index", () => ({
+  emitToUser: () => {},
+  disconnectUser: () => {},
+  initSocketServer: async () => undefined,
+  closeSocketServer: async () => undefined,
+}));
 
 // Runs the REAL Express server's routers in-process (against the same local
 // test database) next to the edge Worker and compares what each answers to
@@ -46,7 +57,9 @@ describe("edge Worker vs the Express reference implementation", () => {
     const { iceServersRouter } = await import("../../server/src/routes/iceServers");
     const { adminStatsRouter } = await import("../../server/src/routes/adminStats");
     const { adminUsersRouter } = await import("../../server/src/routes/adminUsers");
+    const { matchmakingRouter } = await import("../../server/src/routes/matchmaking");
     const { closeDb } = await import("../../server/src/db/client");
+    const { closeRedis } = await import("../../server/src/redis/client");
 
     const app = expressLib();
     app.use(expressLib.json({ limit: "8mb" }));
@@ -55,6 +68,7 @@ describe("edge Worker vs the Express reference implementation", () => {
     app.use("/api/ice-servers", iceServersRouter);
     app.use("/api/admin/stats", adminStatsRouter);
     app.use("/api/admin/users", adminUsersRouter);
+    app.use("/api/matchmaking", matchmakingRouter);
 
     const server = await new Promise<Server>((resolve) => {
       const s = app.listen(0, "127.0.0.1", () => resolve(s));
@@ -65,6 +79,7 @@ describe("edge Worker vs the Express reference implementation", () => {
       close: async () => {
         await new Promise((r) => server.close(r));
         await closeDb();
+        await closeRedis();
       },
     };
 
@@ -141,4 +156,98 @@ describe("edge Worker vs the Express reference implementation", () => {
       }
     });
   }
+
+  // ---- matchmaking: the real Express router (with real Redis) vs the Worker ----
+  //
+  // The two systems have separate queues, so each gets its own pair of people.
+  // Ids differ by construction; they are replaced by labels before comparing.
+  async function mmCall(base: string, method: string, path: string, body?: unknown, headers: Record<string, string> = json) {
+    const res = await fetch(`${base}${path}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
+    return { status: res.status, body: await res.json().catch(() => undefined) };
+  }
+
+  const label = (value: any, names: Record<string, string>): any =>
+    JSON.parse(JSON.stringify(value ?? null), (_key, v) => (typeof v === "string" && names[v] ? names[v] : v));
+
+  it("matchmaking validation, auth and eligibility errors are identical", async () => {
+    const { Fixtures } = await import("./seed");
+    const f = new Fixtures();
+    try {
+      const unverified = await f.member({ verificationStatus: "unverified" });
+      const banned = await f.member({ accountStatus: "banned" });
+      const unknown = "00000000-0000-4000-8000-00000000dead";
+      const cases: Array<[string, string, unknown, Record<string, string>]> = [
+        ["POST", "/api/matchmaking/join", { userId: "nope" }, json],
+        ["POST", "/api/matchmaking/join", {}, json],
+        ["POST", "/api/matchmaking/join", { userId: unknown }, json],
+        ["POST", "/api/matchmaking/join", { userId: unverified.id }, json],
+        ["POST", "/api/matchmaking/join", { userId: banned.id }, json],
+        ["POST", "/api/matchmaking/join", { userId: unknown }, { "content-type": "application/json" }],
+        ["POST", "/api/matchmaking/leave", { userId: "nope" }, json],
+        ["POST", "/api/matchmaking/leave", { userId: unknown }, json],
+        ["GET", "/api/matchmaking/status/not-a-uuid", undefined, secret],
+        ["GET", `/api/matchmaking/status/${unknown}`, undefined, secret],
+        ["POST", "/api/matchmaking/socket-ticket", { userId: unknown }, json],
+        ["POST", "/api/matchmaking/socket-ticket", { userId: unverified.id }, json],
+        ["POST", "/api/matchmaking/socket-ticket", { userId: "nope" }, json],
+      ];
+      for (const [method, path, body, headers] of cases) {
+        const names = { [unverified.id]: "<unverified>", [banned.id]: "<banned>" };
+        const e = await mmCall(express.baseUrl, method, path, body, headers);
+        const w = await mmCall(worker.baseUrl, method, path, body, headers);
+        expect(w.status, `${method} ${path}`).toBe(e.status);
+        expect(label(w.body, names), `${method} ${path}`).toEqual(label(e.body, names));
+      }
+    } finally {
+      await f.cleanup();
+    }
+  });
+
+  it("matchmaking flows give the same answers: waiting, status, leave, match, rejoin, leave-while-matched", async () => {
+    const { Fixtures } = await import("./seed");
+    const f = new Fixtures();
+    try {
+      const exA = await f.member({ displayName: "Asha" });
+      const exB = await f.member({ displayName: "Bela" });
+      const wkA = await f.member({ displayName: "Asha" });
+      const wkB = await f.member({ displayName: "Bela" });
+      await f.setBio(exA.id, "Likes hiking");
+      await f.setBio(wkA.id, "Likes hiking");
+
+      const run = async (base: string, a: string, b: string) => {
+        const names: Record<string, string> = { [a]: "<A>", [b]: "<B>" };
+        const out: unknown[] = [];
+        const step = async (method: string, path: string, body?: unknown, headers: Record<string, string> = json) => {
+          const r = await mmCall(base, method, path, body, headers);
+          out.push({ status: r.status, body: label(r.body, names) });
+          return r;
+        };
+        await step("GET", `/api/matchmaking/status/${a}`, undefined, secret); // idle
+        await step("POST", "/api/matchmaking/join", { userId: a }); // waiting
+        await step("POST", "/api/matchmaking/join", { userId: a }); // duplicate: still waiting
+        await step("GET", `/api/matchmaking/status/${a}`, undefined, secret); // waiting
+        await step("POST", "/api/matchmaking/leave", { userId: a }); // idle
+        await step("GET", `/api/matchmaking/status/${a}`, undefined, secret); // idle
+        await step("POST", "/api/matchmaking/join", { userId: a }); // waiting again
+        const matched = await step("POST", "/api/matchmaking/join", { userId: b }); // matched with A
+        const matchId = (matched.body as any).matchId as string;
+        names[matchId] = "<match>";
+        out[out.length - 1] = { status: matched.status, body: label(matched.body, names) };
+        const seenByA = await step("GET", `/api/matchmaking/status/${a}`, undefined, secret);
+        out[out.length - 1] = { status: seenByA.status, body: label(seenByA.body, names) };
+        await step("POST", "/api/matchmaking/join", { userId: b }); // existing match returned
+        await step("POST", "/api/matchmaking/leave", { userId: b }); // 409
+        return out;
+      };
+
+      const fromExpress = await run(express.baseUrl, exA.id, exB.id);
+      const fromWorker = await run(worker.baseUrl, wkA.id, wkB.id);
+      expect(fromWorker).toEqual(fromExpress);
+      // And the sequence really did exercise a match (not two identical failures).
+      expect(JSON.stringify(fromWorker)).toContain('"state":"matched"');
+      expect(JSON.stringify(fromWorker)).toContain("Cannot leave matchmaking");
+    } finally {
+      await f.cleanup();
+    }
+  }, 60_000);
 });

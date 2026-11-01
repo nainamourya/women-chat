@@ -1,5 +1,6 @@
 import { spawn, spawnSync, type ChildProcess } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { parse } from "dotenv";
 import { assertSafeTestTargets } from "../../server/src/config/testTargetGuard";
@@ -67,9 +68,13 @@ export async function startLocalWorker(port: number, options: StartOptions = {})
   const vars = options.vars ?? DEFAULT_TEST_VARS;
   const varArgs = Object.entries(vars).flatMap(([key, value]) => ["--var", `${key}:${value}`]);
 
+  // Durable Object state (queues, tickets, counters) lives in a fresh directory
+  // per Worker, so nothing from an earlier run can leak into this one.
+  const persistDir = mkdtempSync(path.join(os.tmpdir(), "edge-do-state-"));
+
   const child: ChildProcess = spawn(
     process.execPath,
-    [path.resolve(edgeDir, "../../node_modules/wrangler/bin/wrangler.js"), "dev", "--local", "--port", String(port), "--ip", "127.0.0.1", ...varArgs],
+    [path.resolve(edgeDir, "../../node_modules/wrangler/bin/wrangler.js"), "dev", "--local", "--port", String(port), "--ip", "127.0.0.1", "--persist-to", persistDir, ...varArgs],
     {
       cwd: edgeDir,
       stdio: "ignore",
@@ -85,6 +90,11 @@ export async function startLocalWorker(port: number, options: StartOptions = {})
 
   const stop = () => {
     if (child.pid) spawnSync("taskkill", ["/PID", String(child.pid), "/T", "/F"], { stdio: "ignore" });
+    try {
+      rmSync(persistDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 300 });
+    } catch {
+      // best effort; it is a temp directory
+    }
   };
 
   const baseUrl = `http://127.0.0.1:${port}`;

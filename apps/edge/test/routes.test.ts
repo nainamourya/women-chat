@@ -215,7 +215,6 @@ describe("ported REST routes on the edge Worker (local Docker Postgres)", () => 
     const blocked: Array<[string, string]> = [
       ["POST", "/api/auth/login"],
       ["POST", "/api/auth/register"],
-      ["POST", "/api/matchmaking/join"],
       ["GET", "/api/social/feed"],
       ["POST", "/api/reports"],
       ["POST", "/api/blocks"],

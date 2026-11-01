@@ -35,11 +35,13 @@ export const ROUTE_COVERAGE: CoverageEntry[] = [
   // Stage C: disconnectUser now reaches the user's live sockets (UserHub).
   { method: "PATCH", path: "/api/admin/users/:id", status: "ported" },
   { method: "DELETE", path: "/api/admin/users/:id", status: "ported" },
-  // Stage C: only the socket-ticket route of the matchmaking router — it is
-  // real-time transport (the browser needs a ticket to open a socket). The rest
-  // of that router is matchmaking and stays blocked below. Listed before the
-  // prefix entry so it wins.
+  // Stages C and D: the whole matchmaking router. socket-ticket came first (it is
+  // real-time transport); join, leave and status arrived with the Matchmaker
+  // Durable Object, which replaced the Redis queue.
   { method: "POST", path: "/api/matchmaking/socket-ticket", status: "ported" },
+  { method: "POST", path: "/api/matchmaking/join", status: "ported" },
+  { method: "POST", path: "/api/matchmaking/leave", status: "ported" },
+  { method: "GET", path: "/api/matchmaking/status/:userId", status: "ported" },
 
   // --- Blocked ------------------------------------------------------------
   {
@@ -79,16 +81,8 @@ export const ROUTE_COVERAGE: CoverageEntry[] = [
     path: "/api/account",
     prefix: true,
     status: "blocked",
-    blocker: "Redis rate limit, matchmaking-queue removal and socket disconnect on deletion, plus R2 media deletion.",
-    unblockedBy: "Stages D and E",
-  },
-  {
-    method: "*",
-    path: "/api/matchmaking",
-    prefix: true,
-    status: "blocked",
-    blocker: "Redis matchmaking queue and matchmaking rate limits (join, leave, status). Only socket-ticket is ported.",
-    unblockedBy: "Stage D",
+    blocker: "Redis rate limiter import, and R2 media deletion on account deletion. (Queue removal and socket disconnect now have Durable Object equivalents.)",
+    unblockedBy: "A later stage (limiter shim) and Stage E",
   },
   {
     method: "*",

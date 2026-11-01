@@ -2,6 +2,7 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import type { DbEnv } from "../db";
 import type { Conn } from "./conn";
 import type { Limiter } from "./limiter";
+import type { Matchmaker } from "./matchmaker";
 import type { TicketStore } from "./ticketStore";
 import type { UserHub } from "./userHub";
 
@@ -11,6 +12,7 @@ export interface RealtimeEnv extends DbEnv {
   USER_HUB: DurableObjectNamespace<UserHub>;
   TICKETS: DurableObjectNamespace<TicketStore>;
   LIMITER: DurableObjectNamespace<Limiter>;
+  MATCHMAKER: DurableObjectNamespace<Matchmaker>;
 }
 
 // Server code that is reused unchanged (for example the notification service's
@@ -40,6 +42,12 @@ export const SOCKET_TICKET_WINDOW_SECONDS = 60;
 // Typed accessors, so no other file builds a Durable Object name by hand.
 export const hubFor = (env: RealtimeEnv, userId: string) => env.USER_HUB.get(env.USER_HUB.idFromName(userId));
 export const connFor = (env: RealtimeEnv, connectionId: string) => env.CONN.get(env.CONN.idFromString(connectionId));
+// One queue for everyone: the match decision has to see every waiting user, and
+// a Durable Object runs one call at a time, which is what makes it safe. Each
+// call is a few indexed SQLite statements. If the queue ever outgrows one
+// object it has to be sharded (by region or interest) — a rule change, not a
+// mechanical one, so it is deliberately not done here.
+export const matchmakerFor = (env: RealtimeEnv) => env.MATCHMAKER.get(env.MATCHMAKER.idFromName("global-queue"));
 export const limiterFor = (env: RealtimeEnv, key: string) => env.LIMITER.get(env.LIMITER.idFromName(key));
 
 // Tickets are random UUIDs minted by this Worker. Only that exact shape is ever

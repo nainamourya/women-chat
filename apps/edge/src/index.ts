@@ -9,6 +9,7 @@ export { Conn } from "./realtime/conn";
 export { UserHub } from "./realtime/userHub";
 export { TicketStore } from "./realtime/ticketStore";
 export { Limiter } from "./realtime/limiter";
+export { Matchmaker } from "./realtime/matchmaker";
 
 // The Express app runs behind Workers' Node HTTP bridge. No signal handlers,
 // no server lifecycle: the platform owns the process.

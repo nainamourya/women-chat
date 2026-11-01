@@ -48,7 +48,7 @@ Express server.
 | `call:offer`, `call:answer`, `call:ice-candidate` (`{…, from}`), `call:ended`, `call:ready` | server → client | Migrated |
 | `rate_limited` (`{event, retryAfterSeconds}`) | server → client | Migrated |
 | `dm:message`, `notification:new` | server → client | **Transport migrated** (`emitToUser` reaches every live socket of the user). The routes that emit them are the social routes, which are not on the Worker yet (Stage E). |
-| `matchmaking:started`, `:waiting`, `:match_found`, `:cancelled` | server → client | **Blocked** until matchmaking (Stage D): the same `emitToUser` path will carry them. |
+| `matchmaking:started`, `:waiting`, `:match_found`, `:cancelled` | server → client | Migrated (Stage D): sent through the same `emitToUser` path. See `MATCHMAKING.md`. |
 
 Other behavior that was preserved: one-time ticket consumed before the eligibility
 check, ineligible accounts (banned, suspended, deleted, unverified, under-age
