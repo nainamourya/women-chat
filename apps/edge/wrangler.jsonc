@@ -41,7 +41,35 @@
   "migrations": [
     { "tag": "v1", "new_sqlite_classes": ["Conn", "UserHub", "TicketStore", "Limiter"] },
     { "tag": "v2", "new_sqlite_classes": ["Matchmaker"] }
-  ]
+  ],
+  // Staging (Stage F). Bindings are not inherited by a wrangler environment, so
+  // everything is repeated. Every id/name below is a PLACEHOLDER: replace them
+  // locally (or in CI) when the staging resources exist. Staging deliberately has
+  // its own Worker name, Hyperdrive config, bucket and Durable Object namespaces
+  // (Durable Object classes are namespaced per Worker name), so it cannot touch
+  // production data. No routes or custom domains: it is served from workers.dev
+  // only, and nothing here is deployed. See STAGING.md.
+  "env": {
+    "staging": {
+      "name": "giigirl-edge-staging",
+      "workers_dev": true,
+      "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "00000000000000000000000000000000" }],
+      "r2_buckets": [{ "binding": "PRIVATE_BUCKET", "bucket_name": "giigirl-private-staging-placeholder" }],
+      "durable_objects": {
+        "bindings": [
+          { "name": "CONN", "class_name": "Conn" },
+          { "name": "USER_HUB", "class_name": "UserHub" },
+          { "name": "TICKETS", "class_name": "TicketStore" },
+          { "name": "LIMITER", "class_name": "Limiter" },
+          { "name": "MATCHMAKER", "class_name": "Matchmaker" }
+        ]
+      },
+      "migrations": [
+        { "tag": "v1", "new_sqlite_classes": ["Conn", "UserHub", "TicketStore", "Limiter"] },
+        { "tag": "v2", "new_sqlite_classes": ["Matchmaker"] }
+      ]
+    }
+  },
   // Environment variables (NODE_ENV, CORS_ORIGIN, INTERNAL_API_SECRET, the
   // METERED_TURN_* / TURN_* settings) are intentionally not declared here: the
   // secrets must never be committed, and the Worker fails closed (503 on every

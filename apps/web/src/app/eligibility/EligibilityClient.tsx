@@ -50,18 +50,6 @@ type Submission = {
   createdAt: string;
 };
 
-function readFileAsBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      resolve(result.slice(result.indexOf(",") + 1));
-    };
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(file);
-  });
-}
-
 // Reads the video's own duration metadata in the browser without uploading
 // it anywhere — an off-DOM <video> element is enough to probe this.
 function readVideoDurationSeconds(file: File): Promise<number> {
@@ -155,16 +143,33 @@ export function EligibilityClient({
     setSubmitError(null);
 
     try {
-      const videoBase64 = await readFileAsBase64(file);
-      const res = await fetch("/api/verification/video", {
+      // The video bytes go straight to the backend, not through this app (Vercel
+      // rejects request bodies over 4.5 MB). First ask our own server, which
+      // checks the session, for a short-lived one-time upload authorization.
+      const authRes = await fetch("/api/verification/video/authorize", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          videoBase64,
-          mimeType: file.type,
-          acknowledgedNotice: acknowledged,
-        }),
+        body: JSON.stringify({ contentType: file.type, size: file.size }),
       });
+      const authData = await authRes.json();
+      if (!authRes.ok) {
+        setSubmitError(authData.error ?? "Something went wrong.");
+        return;
+      }
+
+      const res = await fetch(authData.uploadUrl, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${authData.token}`,
+          "Content-Type": file.type,
+          "x-acknowledged-notice": String(acknowledged),
+        },
+        body: file,
+      });
+      if (res.status === 401) {
+        setSubmitError("Your upload session expired. Please try again.");
+        return;
+      }
       const data = await res.json();
 
       if (!res.ok) {

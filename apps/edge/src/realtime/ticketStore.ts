@@ -26,6 +26,22 @@ export class TicketStore extends DurableObject<RealtimeEnv> {
     });
   }
 
+  // Marks `id` as used. Returns true for the first caller and false for every
+  // later one, atomically (same blockConcurrencyWhile guarantee as consume()), so
+  // an upload authorization can be spent exactly once. The record is kept past the
+  // authorization's own expiry, so a replay is refused either way.
+  async claim(id: string, ttlMs: number): Promise<boolean> {
+    return this.ctx.blockConcurrencyWhile(async () => {
+      const key = `claimed:${id}`;
+      if (await this.ctx.storage.get(key)) return false;
+      const expiresAt = Date.now() + ttlMs;
+      await this.ctx.storage.put<StoredTicket>(key, { userId: "", expiresAt });
+      const current = await this.ctx.storage.getAlarm();
+      if (current === null || current > expiresAt) await this.ctx.storage.setAlarm(expiresAt);
+      return true;
+    });
+  }
+
   async alarm(): Promise<void> {
     const now = Date.now();
     const all = await this.ctx.storage.list<StoredTicket>();

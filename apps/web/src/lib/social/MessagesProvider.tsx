@@ -46,6 +46,9 @@ export function MessagesProvider({ children }: { children: ReactNode }) {
       if (cancelled || !first) return;
       let firstTicket: string | null = first;
       socket = io(process.env.NEXT_PUBLIC_SOCKET_URL!, {
+        // The realtime backend (a Cloudflare Durable Object) speaks WebSocket only;
+        // it cannot serve the HTTP long-polling transport.
+        transports: ["websocket"],
         auth: (done) => {
           if (firstTicket) {
             const ticket = firstTicket;

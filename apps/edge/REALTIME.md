@@ -60,10 +60,10 @@ every event, and unknown events are ignored.
 
 1. **WebSocket transport only.** A Durable Object can hold a WebSocket but not an
    HTTP long-poll session. The browser must connect with
-   `io(url, { transports: ["websocket"], auth })`. The web app currently uses the
-   default (polling first), so that one option has to be added to the three socket
-   clients and `MessagesProvider` when the frontend is switched over. Not done in
-   this stage (the web app is untouched). Long-polling requests get a 400.
+   `io(url, { transports: ["websocket"], auth })`. Stage F added that
+   option to the two `io()` call sites in the web app (`MatchClient` and
+   `MessagesProvider`; the call and chat components reuse the match socket).
+   Long-polling requests get a 400.
 2. **Connection registration fails closed.** The Express server failed open if
    Redis could not count connections. Here the hub is also the delivery path to the
    socket, so a socket it does not know about would be deaf; it is refused instead.

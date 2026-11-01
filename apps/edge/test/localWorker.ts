@@ -29,7 +29,7 @@ export function readServerTestTargets(): LocalTargets {
   };
 }
 
-export type RunningWorker = { baseUrl: string; stop: () => void };
+export type RunningWorker = { baseUrl: string; stop: () => void; /** Everything the Worker printed so far (empty unless captureLogs was set). */ logs: () => string };
 
 // Synthetic, test-only values. They are passed on the wrangler command line
 // (visible in the local process list), which is fine precisely because none of
@@ -54,6 +54,8 @@ export type StartOptions = {
   databaseUrl?: string;
   // Build with the test-only routes (/__test__/emit). Never set for a normal build.
   testHooks?: boolean;
+  // Keep the Worker's stdout/stderr so a test can assert on what it logged.
+  captureLogs?: boolean;
 };
 
 /** The guard-validated local database URL, for tests that seed or clean rows. */
@@ -77,7 +79,7 @@ export async function startLocalWorker(port: number, options: StartOptions = {})
     [path.resolve(edgeDir, "../../node_modules/wrangler/bin/wrangler.js"), "dev", "--local", "--port", String(port), "--ip", "127.0.0.1", "--persist-to", persistDir, ...varArgs],
     {
       cwd: edgeDir,
-      stdio: "ignore",
+      stdio: options.captureLogs ? ["ignore", "pipe", "pipe"] : "ignore",
       env: {
         ...process.env,
         WRANGLER_SEND_METRICS: "false",
@@ -87,6 +89,13 @@ export async function startLocalWorker(port: number, options: StartOptions = {})
       },
     },
   );
+
+  let captured = "";
+  if (options.captureLogs) {
+    child.stdout?.on("data", (d) => (captured += String(d)));
+    child.stderr?.on("data", (d) => (captured += String(d)));
+  }
+  const logs = () => captured;
 
   const stop = () => {
     if (child.pid) spawnSync("taskkill", ["/PID", String(child.pid), "/T", "/F"], { stdio: "ignore" });
@@ -101,7 +110,7 @@ export async function startLocalWorker(port: number, options: StartOptions = {})
   for (let i = 0; i < 90; i++) {
     try {
       const res = await fetch(`${baseUrl}/api/health`, { signal: AbortSignal.timeout(2000) });
-      if (res.ok || options.anyResponseCountsAsUp) return { baseUrl, stop };
+      if (res.ok || options.anyResponseCountsAsUp) return { baseUrl, stop, logs };
     } catch {
       // not up yet
     }

@@ -1,6 +1,9 @@
+import path from "node:path";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
+  // Only the web-proxy rehearsal test (test/webProxy.test.ts) imports web code.
+  resolve: { alias: { "@": path.resolve(import.meta.dirname, "../web/src") } },
   test: {
     include: ["test/**/*.test.ts"],
     globalSetup: ["test/globalSetup.ts"],

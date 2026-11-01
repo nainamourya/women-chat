@@ -64,9 +64,12 @@ body:    the raw video
 - On any failure the object is deleted; the partial unique index still guards a race
   between two simultaneous submissions (tested: exactly one wins, no orphan).
 
-**Needs Stage F:** the Next.js route `apps/web/src/app/api/verification/video/route.ts`
-and the browser upload currently send base64 JSON; they must send the raw bytes to
-this endpoint. Vercel's own request-size limits for that hop were not examined.
+**Browsers do not use that endpoint.** Vercel rejects request bodies over 4.5 MB, so
+the browser uploads directly with `PUT /api/verification/video-upload`
+(`src/directUpload.ts`), authorized by a signed one-time token from the web app
+instead of `x-internal-api-secret`. After the token is verified and spent, it runs
+the same `processUpload` code as the internal route, as the token's user. See
+`STAGING.md` for the token's properties and CORS.
 
 ## Other differences from Express
 

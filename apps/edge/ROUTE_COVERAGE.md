@@ -37,16 +37,20 @@ unauthenticated caller still gets 401). Nothing is stubbed to succeed.
 | * | /api/admin/verification/* | Review, decide, retry deletion, stream the video. Videos are read from and deleted in R2. |
 | * | /api/verification/* | Everything except the base64 video upload: `GET /video/status/:userId`, `POST /simulate` (404 outside development, as on Express). |
 | PUT | /api/verification/video/:userId | **Worker-only replacement** for the base64 upload: the raw video is streamed into R2. See `STORAGE.md`. |
+| POST | /api/verification/video-authorization/check | **Worker-only**, internal secret. The rate limit (per user and, when supplied, per IP) for minting upload authorizations; see `STAGING.md`. |
+| PUT | /api/verification/video-upload | **Worker-only** direct browser upload, authorized by a short-lived signed one-time token (not the internal secret), CORS for the configured web origin only. See `STORAGE.md`. |
 
 ## Blocked (answer 501)
 
 | Method | Path | Exact blocker | Unblocked by |
 |---|---|---|---|
-| POST | /api/verification/video | The video arrives as a base64 string inside a JSON body (~33 MB for 25 MB of video). A Worker has 128 MB of memory and that path holds the raw body, the string, the parsed copy and the decoded bytes at once, so it is not safe. Replaced by `PUT /api/verification/video/:userId`. | Stage F: the Next.js proxy must send the raw bytes instead of base64 JSON |
+| POST | /api/verification/video | The video arrives as a base64 string inside a JSON body (~33 MB for 25 MB of video). A Worker has 128 MB of memory and that path holds the raw body, the string, the parsed copy and the decoded bytes at once, so it is not safe. Replaced by `PUT /api/verification/video/:userId`. | Replaced: browsers upload directly with PUT /api/verification/video-upload (signed one-time authorization); see STORAGE.md |
 
-## Not part of Stage E
+## Frontend and staging
 
-The frontend (`apps/web`) is untouched, including the Next.js proxy for video
-uploads and the WebSocket-only transport setting for the socket clients. Both are
-Stage F items. Real-time is described in `REALTIME.md`, matchmaking in
+Stage F updated the web app: the verification video goes directly from the browser
+to the Worker with a signed one-time authorization (`/api/verification/video/authorize`
+on Next.js, `PUT /api/verification/video-upload` on the Worker), and the socket
+clients are WebSocket-only; see `STAGING.md`.
+Real-time is described in `REALTIME.md`, matchmaking in
 `MATCHMAKING.md`, storage in `STORAGE.md`.

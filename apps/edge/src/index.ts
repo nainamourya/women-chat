@@ -3,6 +3,7 @@ import { app } from "./app";
 import { getConfig } from "./config";
 import { withDb } from "./db";
 import { runWithRequestContext, type RealtimeEnv } from "./realtime/env";
+import { AUTHORIZATION_CHECK_PATH, DIRECT_UPLOAD_PATH, handleAuthorizationCheck, handleDirectUpload } from "./directUpload";
 import { VIDEO_UPLOAD_PATH, handleVideoUpload } from "./verificationUpload";
 
 // Durable Object classes must be exported from the Worker entry.
@@ -50,6 +51,13 @@ export default {
     // (including when a handler throws) — see db.ts. The request's bindings are
     // also made available to reused server code that has no `env` parameter.
     const url = new URL(request.url);
+    if (url.pathname === AUTHORIZATION_CHECK_PATH) {
+      return runWithRequestContext(env, ctx, () => withDb(env, () => handleAuthorizationCheck(request)));
+    }
+    if (url.pathname === DIRECT_UPLOAD_PATH) {
+      // Token-authorized browser upload, including its CORS preflight (src/directUpload.ts).
+      return runWithRequestContext(env, ctx, () => withDb(env, () => handleDirectUpload(request)));
+    }
     const upload = request.method === "PUT" ? VIDEO_UPLOAD_PATH.exec(url.pathname) : null;
     if (upload) {
       // The streaming video upload is handled here, before Express, so the body

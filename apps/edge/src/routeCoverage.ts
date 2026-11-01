@@ -66,12 +66,24 @@ export const ROUTE_COVERAGE: CoverageEntry[] = [
     status: "blocked",
     blocker:
       "The video arrives as a base64 string inside a JSON body (~33 MB for 25 MB of video). A Worker has 128 MB of memory and that path holds the raw body, the string, the parsed copy and the decoded bytes at once, so it is not safe. Replaced by PUT /api/verification/video/:userId (raw bytes streamed into R2).",
-    unblockedBy: "Stage F (the Next.js proxy has to send the raw bytes instead of base64 JSON)",
+    unblockedBy: "Replaced: browsers upload directly with PUT /api/verification/video-upload (signed one-time authorization); see STORAGE.md",
     message: "Base64 video upload is not available on the edge backend. Use PUT /api/verification/video/:userId with the raw video.",
   },
   {
     method: "PUT",
     path: "/api/verification/video/:userId",
+    status: "ported",
+    edgeOnly: true,
+  },
+  {
+    method: "PUT",
+    path: "/api/verification/video-upload",
+    status: "ported",
+    edgeOnly: true,
+  },
+  {
+    method: "POST",
+    path: "/api/verification/video-authorization/check",
     status: "ported",
     edgeOnly: true,
   },

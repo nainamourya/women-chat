@@ -154,6 +154,9 @@ export function MatchClient() {
     // Unauthorized and the socket never recovers.
     let firstTicket: string | null = ticket;
     const socket = io(process.env.NEXT_PUBLIC_SOCKET_URL!, {
+      // The realtime backend (a Cloudflare Durable Object) speaks WebSocket only;
+      // it cannot serve the HTTP long-polling transport.
+      transports: ["websocket"],
       auth: (cb) => {
         if (firstTicket) {
           const t = firstTicket;

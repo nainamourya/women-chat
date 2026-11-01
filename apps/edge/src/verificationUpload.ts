@@ -54,7 +54,7 @@ export const VIDEO_UPLOAD_PATH = /^\/api\/verification\/video\/([^/]+)$/;
 const json = (body: unknown, status: number, headers?: Record<string, string>) => Response.json(body, { status, headers });
 
 // Constant-time comparison, as in apps/server/src/middleware/internalAuth.ts.
-function secretMatches(provided: string | null): boolean {
+export function secretMatches(provided: string | null): boolean {
   const config = getConfig();
   if (!provided || !config.ok) return false;
   const a = createHash("sha256").update(provided).digest();
@@ -66,8 +66,13 @@ export async function handleVideoUpload(request: Request, userIdParam: string): 
   // Same order as the Express route: authenticate, validate, rate-limit, then the service checks.
   if (!secretMatches(request.headers.get("x-internal-api-secret"))) return json({ error: "Unauthorized." }, 401);
   if (!UUID.test(userIdParam)) return json({ error: "Invalid user id." }, 400);
-  const userId = userIdParam.toLowerCase();
+  return processUpload(request, userIdParam.toLowerCase());
+}
 
+// Everything after authentication, shared by the internal-secret route above and
+// the token-authorized direct upload (src/directUpload.ts). `userId` is always
+// already authenticated by the caller (secret or verified token), never raw input.
+export async function processUpload(request: Request, userId: string): Promise<Response> {
   const config = getConfig();
   if (!config.ok) return json({ error: "Service unavailable." }, 503);
   const { env } = getRequestContext();
@@ -157,16 +162,23 @@ export async function handleVideoUpload(request: Request, userIdParam: string): 
       if (code === "23505") throw new AuthError("You already have a submission awaiting review.", 409);
       throw err;
     }
+    // The row now references the object, so it must not be cleaned up from here on,
+    // even if the status update below fails (that would leave a submission whose
+    // video is gone).
+    storageKey = undefined;
 
     await db.update(users).set({ verificationStatus: "pending", updatedAt: new Date() }).where(eq(users.id, userId));
 
     // Never exposes videoStorageKey: an internal reference no client needs.
     const { videoStorageKey: _omit, ...publicSubmission } = submission;
-    storageKey = undefined; // now referenced by a row: must not be cleaned up
     return json({ submission: publicSubmission }, 201);
   } catch (err) {
     // Anything that stopped the submission leaves no orphaned video behind.
-    if (storageKey) await deleteVerificationVideo(storageKey).catch(() => false);
+    if (storageKey) {
+      const removed = await deleteVerificationVideo(storageKey).catch(() => false);
+      // Never the key itself: it is an internal reference.
+      if (!removed) console.error("Could not confirm deletion of a failed verification upload (orphaned object).");
+    }
     if (err instanceof AuthError) return json({ error: err.message }, err.status);
     console.error("submit verification video error:", err instanceof Error ? err.name : "unknown error");
     return json({ error: "Something went wrong." }, 500);
