@@ -3,6 +3,7 @@ import { app } from "./app";
 import { getConfig } from "./config";
 import { withDb } from "./db";
 import { runWithRequestContext, type RealtimeEnv } from "./realtime/env";
+import { VIDEO_UPLOAD_PATH, handleVideoUpload } from "./verificationUpload";
 
 // Durable Object classes must be exported from the Worker entry.
 export { Conn } from "./realtime/conn";
@@ -48,6 +49,15 @@ export default {
     // Every request gets its own database client, closed when the request ends
     // (including when a handler throws) — see db.ts. The request's bindings are
     // also made available to reused server code that has no `env` parameter.
+    const url = new URL(request.url);
+    const upload = request.method === "PUT" ? VIDEO_UPLOAD_PATH.exec(url.pathname) : null;
+    if (upload) {
+      // The streaming video upload is handled here, before Express, so the body
+      // is never read into memory (see src/verificationUpload.ts).
+      if (!getConfig().ok) return Response.json({ error: "Service unavailable." }, { status: 503 });
+      return runWithRequestContext(env, ctx, () => withDb(env, () => handleVideoUpload(request, upload[1])));
+    }
+
     return runWithRequestContext(env, ctx, () => withDb(env, async () => handler.fetch!(request, env, ctx)));
   },
 };

@@ -13,6 +13,9 @@ export interface RealtimeEnv extends DbEnv {
   TICKETS: DurableObjectNamespace<TicketStore>;
   LIMITER: DurableObjectNamespace<Limiter>;
   MATCHMAKER: DurableObjectNamespace<Matchmaker>;
+  // The private R2 bucket (verification videos at the root, social media under
+  // "social/", report evidence under "reports/evidence/"). Never public.
+  PRIVATE_BUCKET: R2Bucket;
 }
 
 // Server code that is reused unchanged (for example the notification service's

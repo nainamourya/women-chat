@@ -42,7 +42,7 @@ describe("route coverage table", () => {
   });
 
   it("every ported route in the table exists on the Express server", () => {
-    const exact = ROUTE_COVERAGE.filter((e) => !e.prefix && e.status !== "blocked");
+    const exact = ROUTE_COVERAGE.filter((e) => !e.prefix && e.status !== "blocked" && !e.edgeOnly);
     const unknown = exact.filter((e) => !routes.some((r) => r.method === e.method && r.path === e.path) && !e.path.startsWith("/api/health"));
     expect(unknown.map((e) => `${e.method} ${e.path}`)).toEqual([]);
   });

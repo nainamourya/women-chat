@@ -628,7 +628,9 @@ describe("readiness and build hygiene", () => {
       rmSync(file);
       return text;
     };
-    expect(out("0")).not.toContain("__test__/emit");
+    const normal = out("0");
+    expect(normal).not.toContain("__test__/emit");
+    expect(normal).not.toContain("__test__/r2");
     expect(out("1")).toContain("__test__/emit");
   });
 

@@ -122,7 +122,11 @@ export class Fixtures {
   }
 
   async cleanup() {
-    if (this.userIds.length > 0) await this.db.delete(schema.users).where(inArray(schema.users.id, this.userIds));
+    if (this.userIds.length > 0) {
+      // Rows that reference an admin without cascading must go first.
+      await this.db.delete(schema.verificationSubmissions).where(inArray(schema.verificationSubmissions.reviewedBy, this.userIds));
+      await this.db.delete(schema.users).where(inArray(schema.users.id, this.userIds));
+    }
     await this.client.end({ timeout: 2 });
   }
 }

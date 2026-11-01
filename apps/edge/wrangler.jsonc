@@ -24,6 +24,10 @@
       // apps/server/src/config/testTargetGuard.ts (see test/localWorker.ts).
     }
   ],
+  // Private object storage (Stage E). The bucket name is a placeholder: nothing
+  // here points at a real bucket, and nothing in this repo creates or touches
+  // one. Local runs use wrangler's simulated R2 bucket.
+  "r2_buckets": [{ "binding": "PRIVATE_BUCKET", "bucket_name": "giigirl-private-bucket-placeholder" }],
   // Real-time layer (Stage C), replacing Redis + Socket.IO. See REALTIME.md.
   "durable_objects": {
     "bindings": [

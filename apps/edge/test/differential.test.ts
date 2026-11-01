@@ -58,6 +58,13 @@ describe("edge Worker vs the Express reference implementation", () => {
     const { adminStatsRouter } = await import("../../server/src/routes/adminStats");
     const { adminUsersRouter } = await import("../../server/src/routes/adminUsers");
     const { matchmakingRouter } = await import("../../server/src/routes/matchmaking");
+    const { authRouter } = await import("../../server/src/routes/auth");
+    const { blocksRouter } = await import("../../server/src/routes/blocks");
+    const { reportsRouter } = await import("../../server/src/routes/reports");
+    const { socialRouter } = await import("../../server/src/routes/social");
+    const { accountRouter } = await import("../../server/src/routes/account");
+    const { verificationRouter } = await import("../../server/src/routes/verification");
+    const { adminVerificationRouter } = await import("../../server/src/routes/adminVerification");
     const { closeDb } = await import("../../server/src/db/client");
     const { closeRedis } = await import("../../server/src/redis/client");
 
@@ -69,6 +76,13 @@ describe("edge Worker vs the Express reference implementation", () => {
     app.use("/api/admin/stats", adminStatsRouter);
     app.use("/api/admin/users", adminUsersRouter);
     app.use("/api/matchmaking", matchmakingRouter);
+    app.use("/api/auth", authRouter);
+    app.use("/api/blocks", blocksRouter);
+    app.use("/api/reports", reportsRouter);
+    app.use("/api/social", socialRouter);
+    app.use("/api/account", accountRouter);
+    app.use("/api/verification", verificationRouter);
+    app.use("/api/admin/verification", adminVerificationRouter);
 
     const server = await new Promise<Server>((resolve) => {
       const s = app.listen(0, "127.0.0.1", () => resolve(s));
@@ -250,4 +264,65 @@ describe("edge Worker vs the Express reference implementation", () => {
       await f.cleanup();
     }
   }, 60_000);
+
+  // ---- Stage E routers: the real Express routers vs the Worker, same database ----
+  //
+  // Read paths and error cases, where the same member gives byte-identical answers.
+  // (Writes that need R2 or Redis-backed counters are covered in storage.test.ts and
+  // social.test.ts, since Express here has no real bucket.)
+  it("auth, verification, admin-verification, social, blocks, reports and account answer identically", async () => {
+    const { Fixtures } = await import("./seed");
+    const f = new Fixtures();
+    try {
+      const member = await f.member({ username: `diff_${Date.now().toString(36)}` });
+      const other = await f.member({ username: `diff2_${Date.now().toString(36)}` });
+      const deleted = await f.member({ accountStatus: "deleted" });
+      const unknown = "00000000-0000-4000-8000-00000000dead";
+      const viewer = (id?: string): Record<string, string> => ({ ...json, ...(id ? { "x-viewer-id": id } : {}) });
+      type Case = [string, string, string, unknown, Record<string, string>];
+      const cases: Case[] = [
+        ["auth account-status active", "GET", `/api/auth/account-status/${member.id}`, undefined, secret],
+        ["auth account-status deleted", "GET", `/api/auth/account-status/${deleted.id}`, undefined, secret],
+        ["auth account-status unknown", "GET", `/api/auth/account-status/${unknown}`, undefined, secret],
+        ["auth account-status bad id", "GET", "/api/auth/account-status/nope", undefined, secret],
+        ["auth no secret", "GET", `/api/auth/account-status/${member.id}`, undefined, {}],
+        ["auth oauth invalid", "POST", "/api/auth/oauth/google", { email: "nope" }, json],
+        ["auth confirm-age invalid", "POST", "/api/auth/confirm-age", { userId: "nope" }, json],
+        ["verification status none", "GET", `/api/verification/video/status/${member.id}`, undefined, secret],
+        ["verification status bad id", "GET", "/api/verification/video/status/nope", undefined, secret],
+        ["verification simulate (not development)", "POST", "/api/verification/simulate", { userId: member.id }, json],
+        ["admin verification non-admin", "GET", `/api/admin/verification?adminUserId=${member.id}`, undefined, secret],
+        ["admin verification bad query", "GET", "/api/admin/verification", undefined, secret],
+        ["admin verification video unknown", "GET", `/api/admin/verification/${unknown}/video?adminUserId=${member.id}`, undefined, secret],
+        ["social no viewer", "GET", "/api/social/me", undefined, json],
+        ["social me", "GET", "/api/social/me", undefined, viewer(member.id)],
+        ["social profile of other", "GET", `/api/social/users/${other.username}`, undefined, viewer(member.id)],
+        ["social unknown profile", "GET", "/api/social/users/nobody_here_xyz", undefined, viewer(member.id)],
+        ["social feed (empty)", "GET", "/api/social/feed", undefined, viewer(member.id)],
+        ["social bad profile body", "PUT", "/api/social/me/profile", { username: "no spaces!" }, viewer(member.id)],
+        ["social bad avatar body", "PUT", "/api/social/me/avatar", { imageBase64: "" }, viewer(member.id)],
+        ["social bad post id", "GET", "/api/social/posts/nope", undefined, viewer(member.id)],
+        ["social blocked list (empty)", "GET", "/api/social/blocked", undefined, viewer(member.id)],
+        ["social unread counts", "GET", "/api/social/unread-counts", undefined, viewer(member.id)],
+        ["social media bad id", "GET", "/api/social/media/posts/nope", undefined, viewer(member.id)],
+        ["blocks bad body", "POST", "/api/blocks", { blockerUserId: member.id }, json],
+        ["blocks self", "POST", "/api/blocks", { blockerUserId: member.id, blockedUserId: member.id }, json],
+        ["reports bad body", "POST", "/api/reports", { reporterUserId: "nope" }, json],
+        ["reports admin list non-admin", "GET", `/api/reports?adminUserId=${member.id}`, undefined, secret],
+        ["reports evidence non-admin", "GET", `/api/reports/${unknown}/evidence?adminUserId=${member.id}`, undefined, secret],
+        ["account delete bad body", "DELETE", "/api/account", {}, json],
+        ["account delete wrong confirmation", "DELETE", "/api/account", { userId: member.id, confirmation: "delete" }, json],
+        ["account delete unknown user", "DELETE", "/api/account", { userId: unknown, confirmation: "DELETE" }, json],
+      ];
+      const names = { [member.id]: "<member>", [other.id]: "<other>", [deleted.id]: "<deleted>" };
+      for (const [name, method, path, body, headers] of cases) {
+        const e = await mmCall(express.baseUrl, method, path, body, headers);
+        const w = await mmCall(worker.baseUrl, method, path, body, headers);
+        expect(w.status, name).toBe(e.status);
+        expect(label(w.body, names), name).toEqual(label(e.body, names));
+      }
+    } finally {
+      await f.cleanup();
+    }
+  }, 120_000);
 });

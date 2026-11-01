@@ -212,23 +212,17 @@ describe("ported REST routes on the edge Worker (local Docker Postgres)", () => 
 
   // ---- routes that are NOT served yet must fail loudly, never succeed ----
   describe("blocked routes answer 501 (after the secret check) and do nothing", () => {
-    const blocked: Array<[string, string]> = [
-      ["POST", "/api/auth/login"],
-      ["POST", "/api/auth/register"],
-      ["GET", "/api/social/feed"],
-      ["POST", "/api/reports"],
-      ["POST", "/api/blocks"],
-      ["POST", "/api/account/delete"],
-      ["POST", "/api/verification/video"],
-      ["GET", "/api/admin/verification"],
-    ];
+    // Only the base64-in-JSON video upload is still refused (replaced by a streaming PUT).
+    const blocked: Array<[string, string]> = [["POST", "/api/verification/video"]];
     for (const [method, path] of blocked) {
       it(`${method} ${path}: 401 without the secret, 501 with it`, async () => {
         const noSecret = await call(worker, method, path, { headers: { "content-type": "application/json" }, rawBody: method === "GET" ? undefined : "{}" });
         expect(noSecret.status).toBe(401);
         const withSecret = await call(worker, method, path, { headers: JSON_HEADERS, rawBody: method === "GET" ? undefined : "{}" });
         expect(withSecret.status).toBe(501);
-        expect(withSecret.json).toEqual({ error: "Not available on the edge backend yet." });
+        expect(withSecret.json).toEqual({
+          error: "Base64 video upload is not available on the edge backend. Use PUT /api/verification/video/:userId with the raw video.",
+        });
       });
     }
 

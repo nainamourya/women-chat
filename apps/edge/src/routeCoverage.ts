@@ -17,6 +17,10 @@ export type CoverageEntry = {
   blocker?: string;
   /** Stage expected to unblock it. */
   unblockedBy?: string;
+  /** What a blocked route answers with (501), when the generic text would mislead. */
+  message?: string;
+  /** Exists only on the Worker: a replacement for an Express route that cannot run there. */
+  edgeOnly?: boolean;
 };
 
 export const ROUTE_COVERAGE: CoverageEntry[] = [
@@ -43,63 +47,35 @@ export const ROUTE_COVERAGE: CoverageEntry[] = [
   { method: "POST", path: "/api/matchmaking/leave", status: "ported" },
   { method: "GET", path: "/api/matchmaking/status/:userId", status: "ported" },
 
-  // --- Blocked ------------------------------------------------------------
+  // --- Stage E: the rest of the server's routers --------------------------------
+  // Served by the server's own routers and services, unchanged. Underneath, the
+  // rate limiter is the Durable Object limiter and storage is R2 (src/shims).
+  { method: "*", path: "/api/auth", prefix: true, status: "ported" },
+  { method: "*", path: "/api/blocks", prefix: true, status: "ported" },
+  { method: "*", path: "/api/reports", prefix: true, status: "ported" },
+  { method: "*", path: "/api/social", prefix: true, status: "ported" },
+  { method: "*", path: "/api/account", prefix: true, status: "ported" },
+  { method: "*", path: "/api/admin/verification", prefix: true, status: "ported" },
+
+  // Verification: the base64-in-JSON video upload cannot run in a Worker, so it is
+  // blocked and replaced by a streaming upload. Everything else on the router is
+  // served. The exact blocked entry must come before the router's prefix entry.
   {
-    method: "*",
-    path: "/api/auth",
-    prefix: true,
+    method: "POST",
+    path: "/api/verification/video",
     status: "blocked",
-    blocker: "The routes import the Redis rate limiter (checkLimitFailOpen) and key on the client IP. The Durable Object limiter now exists but is not wired to the HTTP routes yet. bcrypt CPU cost on Workers is also unmeasured.",
-    unblockedBy: "A later stage (limiter shim for HTTP routes, CF-Connecting-IP)",
+    blocker:
+      "The video arrives as a base64 string inside a JSON body (~33 MB for 25 MB of video). A Worker has 128 MB of memory and that path holds the raw body, the string, the parsed copy and the decoded bytes at once, so it is not safe. Replaced by PUT /api/verification/video/:userId (raw bytes streamed into R2).",
+    unblockedBy: "Stage F (the Next.js proxy has to send the raw bytes instead of base64 JSON)",
+    message: "Base64 video upload is not available on the edge backend. Use PUT /api/verification/video/:userId with the raw video.",
   },
   {
-    method: "*",
-    path: "/api/verification",
-    prefix: true,
-    status: "blocked",
-    blocker: "Redis rate limits plus verification video upload (R2, music-metadata, large bodies).",
-    unblockedBy: "A later stage (limiter shim) and Stage E (video upload)",
+    method: "PUT",
+    path: "/api/verification/video/:userId",
+    status: "ported",
+    edgeOnly: true,
   },
-  {
-    method: "*",
-    path: "/api/admin/verification",
-    prefix: true,
-    status: "blocked",
-    blocker: "Reads and deletes verification videos through the R2 S3 client and music-metadata (videoVerification.service).",
-    unblockedBy: "Stage E (storage)",
-  },
-  {
-    method: "*",
-    path: "/api/social",
-    prefix: true,
-    status: "blocked",
-    blocker: "Redis rate limits, R2 media storage, image sanitising CPU, and Socket.IO pushes (dm:message, notification:new).",
-    unblockedBy: "A later stage (limiter shim) and Stage E",
-  },
-  {
-    method: "*",
-    path: "/api/account",
-    prefix: true,
-    status: "blocked",
-    blocker: "Redis rate limiter import, and R2 media deletion on account deletion. (Queue removal and socket disconnect now have Durable Object equivalents.)",
-    unblockedBy: "A later stage (limiter shim) and Stage E",
-  },
-  {
-    method: "*",
-    path: "/api/reports",
-    prefix: true,
-    status: "blocked",
-    blocker: "Redis rate limits and evidence image storage (local disk in the Express server).",
-    unblockedBy: "A later stage (limiter shim) and Stage E",
-  },
-  {
-    method: "*",
-    path: "/api/blocks",
-    prefix: true,
-    status: "blocked",
-    blocker: "Imports the Redis rate limiter (checkLimitFailOpen). The Durable Object limiter now exists but is not wired to the HTTP routes yet; nothing else blocks this router.",
-    unblockedBy: "A later stage (limiter shim for HTTP routes)",
-  },
+  { method: "*", path: "/api/verification", prefix: true, status: "ported" },
 ];
 
 function segments(p: string): string[] {

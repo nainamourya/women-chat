@@ -17,6 +17,13 @@ import { iceServersRouter } from "../../server/src/routes/iceServers";
 import { adminStatsRouter } from "../../server/src/routes/adminStats";
 import { adminUsersRouter } from "../../server/src/routes/adminUsers";
 import { matchmakingRouter } from "../../server/src/routes/matchmaking";
+import { authRouter } from "../../server/src/routes/auth";
+import { blocksRouter } from "../../server/src/routes/blocks";
+import { reportsRouter } from "../../server/src/routes/reports";
+import { socialRouter } from "../../server/src/routes/social";
+import { accountRouter } from "../../server/src/routes/account";
+import { verificationRouter } from "../../server/src/routes/verification";
+import { adminVerificationRouter } from "../../server/src/routes/adminVerification";
 
 export const app = express();
 
@@ -26,6 +33,18 @@ app.use((_req, res, next) => {
   if (!getConfig().ok) {
     return res.status(503).json({ error: "Service unavailable." });
   }
+  next();
+});
+
+// The client address the auth routes rate-limit on. On Cloudflare the edge sets
+// CF-Connecting-IP itself (a client-supplied copy is overwritten), which is why
+// it is the only source used: the Express server had to trust X-Forwarded-For
+// and count proxy hops. Absent (for example a direct local call), req.ip is
+// undefined and those routes skip their IP limit, exactly as they do on Express
+// when there is no address. As before, behind the Next.js server this is that
+// server's address, not the browser's.
+app.use((req, _res, next) => {
+  Object.defineProperty(req, "ip", { value: req.header("cf-connecting-ip") || undefined, configurable: true });
   next();
 });
 
@@ -49,9 +68,10 @@ app.use(
 // before body parsing so an oversized body for a route we do not serve is never
 // read. Nothing here pretends to succeed.
 app.use((req, res, next) => {
-  if (!findBlocked(req.method, req.path)) return next();
+  const blocked = findBlocked(req.method, req.path);
+  if (!blocked) return next();
   requireInternalSecret(req, res, () => {
-    res.status(501).json({ error: "Not available on the edge backend yet." });
+    res.status(501).json({ error: blocked.message ?? "Not available on the edge backend yet." });
   });
 });
 
@@ -112,3 +132,12 @@ app.use("/api/admin/users", adminUsersRouter);
 // status, socket-ticket). Only the queue, the rate limiter and the ticket store
 // underneath were swapped for Durable Objects at build time.
 app.use("/api/matchmaking", matchmakingRouter);
+// Stage E: the rest of the server's routers, unchanged. Storage underneath is R2
+// (see src/shims), and the rate limiter is the Durable Object limiter.
+app.use("/api/auth", authRouter);
+app.use("/api/blocks", blocksRouter);
+app.use("/api/reports", reportsRouter);
+app.use("/api/social", socialRouter);
+app.use("/api/account", accountRouter);
+app.use("/api/verification", verificationRouter);
+app.use("/api/admin/verification", adminVerificationRouter);
