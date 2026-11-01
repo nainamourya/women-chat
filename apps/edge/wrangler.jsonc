@@ -23,7 +23,17 @@
       // harness injects it through the environment, and only after it passes
       // apps/server/src/config/testTargetGuard.ts (see test/localWorker.ts).
     }
-  ]
+  ],
+  // Real-time layer (Stage C), replacing Redis + Socket.IO. See REALTIME.md.
+  "durable_objects": {
+    "bindings": [
+      { "name": "CONN", "class_name": "Conn" },
+      { "name": "USER_HUB", "class_name": "UserHub" },
+      { "name": "TICKETS", "class_name": "TicketStore" },
+      { "name": "LIMITER", "class_name": "Limiter" }
+    ]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Conn", "UserHub", "TicketStore", "Limiter"] }]
   // Environment variables (NODE_ENV, CORS_ORIGIN, INTERNAL_API_SECRET, the
   // METERED_TURN_* / TURN_* settings) are intentionally not declared here: the
   // secrets must never be committed, and the Worker fails closed (503 on every

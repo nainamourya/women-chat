@@ -233,17 +233,6 @@ describe("ported REST routes on the edge Worker (local Docker Postgres)", () => 
       });
     }
 
-    it("PATCH /api/admin/users/:id (ban) is refused and the user stays active", async () => {
-      const res = await call(worker, "PATCH", `/api/admin/users/${seed.targetId}`, { headers: JSON_HEADERS, body: { adminUserId: seed.adminId, action: "ban" } });
-      expect(res.status).toBe(501);
-      expect((await readUser(seed.targetId))?.accountStatus).toBe("active");
-    });
-
-    it("DELETE /api/admin/users/:id is refused and the user still exists", async () => {
-      const res = await call(worker, "DELETE", `/api/admin/users/${seed.targetId}?adminUserId=${seed.adminId}`, { headers: SECRET });
-      expect(res.status).toBe(501);
-      expect(await readUser(seed.targetId)).toBeDefined();
-    });
   });
 });
 
@@ -270,7 +259,7 @@ describe("database failure", () => {
   it("readiness reports the database as down with 503", async () => {
     const res = await call(worker, "GET", "/api/health/ready");
     expect(res.status).toBe(503);
-    expect(res.json).toEqual({ status: "error", dependencies: { postgres: "error" } });
+    expect(res.json).toEqual({ status: "error", dependencies: { postgres: "error", realtime: "ok" } });
   });
 });
 

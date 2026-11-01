@@ -51,6 +51,8 @@ export type StartOptions = {
   // testTargetGuard (local, test-named, opted in) — used to simulate an
   // unreachable database with a closed local port.
   databaseUrl?: string;
+  // Build with the test-only routes (/__test__/emit). Never set for a normal build.
+  testHooks?: boolean;
 };
 
 /** The guard-validated local database URL, for tests that seed or clean rows. */
@@ -74,6 +76,7 @@ export async function startLocalWorker(port: number, options: StartOptions = {})
       env: {
         ...process.env,
         WRANGLER_SEND_METRICS: "false",
+        EDGE_TEST_HOOKS: options.testHooks ? "1" : "0",
         // Wrangler's documented override for a Hyperdrive binding's local target.
         CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE: databaseUrl,
       },

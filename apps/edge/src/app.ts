@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
-import { sql } from "drizzle-orm";
+import { z } from "zod";
+import { eq, sql } from "drizzle-orm";
 import { getConfig } from "./config";
 import { db } from "./db";
 import { findBlocked } from "./routeCoverage";
@@ -9,6 +10,18 @@ import { findBlocked } from "./routeCoverage";
 // database client, environment and socket modules are redirected at build time
 // — see scripts/build.mjs.)
 import { requireInternalSecret } from "../../server/src/middleware/internalAuth";
+import { AuthError, assertEligible } from "../../server/src/services/auth.service";
+import { users } from "../../server/src/db/schema";
+import { checkLimitFailOpen } from "./realtime/limiter";
+import {
+  SOCKET_TICKET_LIMIT,
+  SOCKET_TICKET_TTL_MS,
+  SOCKET_TICKET_WINDOW_SECONDS,
+  getRequestContext,
+  limiterFor,
+  ticketStoreFor,
+} from "./realtime/env";
+import { registerTestHooks } from "./testHooks";
 import { interestsRouter } from "../../server/src/routes/interests";
 import { profileRouter } from "../../server/src/routes/profile";
 import { iceServersRouter } from "../../server/src/routes/iceServers";
@@ -59,29 +72,99 @@ app.get("/api/health", (_req, res) => {
   res.json({ status: "ok" });
 });
 
-// Readiness: Postgres only for now (Redis arrives in Stage C). Never reports
-// healthy when the database is down, and never leaks connection details.
-app.get("/api/health/ready", async (_req, res) => {
+// Readiness reports only dependencies the Worker really has: Postgres (through
+// Hyperdrive) and the real-time Durable Objects (tickets, rate limiter). There
+// is deliberately no `redis` entry — Redis was replaced, not reproduced, and
+// claiming it here would be wrong. Never reports healthy when something is
+// down, and never leaks connection details.
+async function withTimeout<T>(work: Promise<T>, label: string): Promise<boolean> {
   let timer: ReturnType<typeof setTimeout> | undefined;
-  let dbOk = false;
   try {
     await Promise.race([
-      db.execute(sql`select 1`),
+      work,
       new Promise<never>((_, reject) => {
-        timer = setTimeout(() => reject(new Error("Postgres ping timed out")), 2000);
+        timer = setTimeout(() => reject(new Error(`${label} ping timed out`)), 2000);
       }),
     ]);
-    dbOk = true;
+    return true;
   } catch (err) {
     // Error type only — the message could carry a host or connection string.
-    console.error("Postgres health check failed:", err instanceof Error ? err.name : "unknown error");
+    console.error(`${label} health check failed:`, err instanceof Error ? err.name : "unknown error");
+    return false;
   } finally {
     clearTimeout(timer);
   }
-  res
-    .status(dbOk ? 200 : 503)
-    .json({ status: dbOk ? "ok" : "error", dependencies: { postgres: dbOk ? "ok" : "error" } });
+}
+
+app.get("/api/health/ready", async (_req, res) => {
+  const { env } = getRequestContext();
+  const [dbOk, realtimeOk] = await Promise.all([
+    withTimeout(db.execute(sql`select 1`), "Postgres"),
+    // A throwaway key: proves the Durable Object namespaces answer without
+    // touching anything real (the window expires on its own).
+    withTimeout(limiterFor(env, "health:readiness").hit(1_000_000, 1), "Real-time"),
+  ]);
+  const ok = dbOk && realtimeOk;
+  res.status(ok ? 200 : 503).json({
+    status: ok ? "ok" : "error",
+    dependencies: { postgres: dbOk ? "ok" : "error", realtime: realtimeOk ? "ok" : "error" },
+  });
 });
+
+// Port of POST /socket-ticket from apps/server/src/routes/matchmaking.ts: same
+// validation, same per-user limit (10 per 60 s, fail-open like the Express
+// server), same eligibility check, same status codes and bodies. Only the
+// ticket store changed (Redis -> TicketStore Durable Object). The rest of the
+// matchmaking router (join/leave/status) is not part of this stage.
+const userIdBodySchema = z.object({ userId: z.string().uuid() });
+
+app.post("/api/matchmaking/socket-ticket", requireInternalSecret, async (req, res) => {
+  const parsed = userIdBodySchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: "Invalid user id." });
+  }
+  const { env } = getRequestContext();
+
+  const limit = await checkLimitFailOpen(
+    env,
+    `ratelimit:socket-ticket:${parsed.data.userId}`,
+    SOCKET_TICKET_LIMIT,
+    SOCKET_TICKET_WINDOW_SECONDS,
+    "socket-ticket",
+  );
+  if (!limit.allowed) {
+    // Same generic 429 as sendRateLimitedResponse in the Express server.
+    res.setHeader("Retry-After", String(Math.max(1, Math.ceil(limit.retryAfterSeconds))));
+    return res.status(429).json({ error: "Too many attempts. Please try again later." });
+  }
+
+  // Defense in depth: socket authentication checks this again on every connection.
+  try {
+    const user = await db.query.users.findFirst({ where: eq(users.id, parsed.data.userId) });
+    if (!user) {
+      return res.status(404).json({ error: "User not found." });
+    }
+    assertEligible(user);
+  } catch (err) {
+    if (err instanceof AuthError) {
+      return res.status(err.status).json({ error: err.message });
+    }
+    console.error("socket-ticket eligibility check error:", err instanceof Error ? err.name : "unknown error");
+    return res.status(500).json({ error: "Something went wrong." });
+  }
+
+  const ticket = crypto.randomUUID();
+  try {
+    await ticketStoreFor(env, ticket).mint(ticket, parsed.data.userId, SOCKET_TICKET_TTL_MS);
+  } catch {
+    // Fail closed: no ticket store means no ticket (the Express version throws here too).
+    console.error("socket-ticket mint error: ticket store unavailable");
+    return res.status(500).json({ error: "Something went wrong." });
+  }
+  res.status(200).json({ ticket });
+});
+
+registerTestHooks(app);
 
 app.use("/api/interests", interestsRouter);
 app.use("/api/profile", profileRouter);

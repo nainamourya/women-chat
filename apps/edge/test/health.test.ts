@@ -15,10 +15,10 @@ describe("edge Worker (Stage A) against local Docker Postgres", () => {
     expect(await res.json()).toEqual({ status: "ok" });
   });
 
-  it("GET /api/health/ready reaches Postgres through the Hyperdrive binding", async () => {
+  it("GET /api/health/ready reaches Postgres (Hyperdrive) and the real-time Durable Objects, and makes no Redis claim", async () => {
     const res = await fetch(`${worker.baseUrl}/api/health/ready`);
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ status: "ok", dependencies: { postgres: "ok" } });
+    expect(await res.json()).toEqual({ status: "ok", dependencies: { postgres: "ok", realtime: "ok" } });
   });
 
   it("unknown routes return 404 (Express's default, as on the Express server)", async () => {

@@ -22,13 +22,9 @@ export type CoverageEntry = {
 export const ROUTE_COVERAGE: CoverageEntry[] = [
   // --- Ported -------------------------------------------------------------
   { method: "GET", path: "/api/health", status: "ported" },
-  {
-    method: "GET",
-    path: "/api/health/ready",
-    status: "partial",
-    blocker: "Reports Postgres only. The Express version also pings Redis, which does not exist in the Worker yet.",
-    unblockedBy: "Stage C (Redis replacement)",
-  },
+  // Readiness reports Postgres and the real-time Durable Objects. It has no
+  // `redis` entry on purpose: Redis was replaced, not reproduced (Stage C).
+  { method: "GET", path: "/api/health/ready", status: "ported" },
   { method: "GET", path: "/api/interests", status: "ported" },
   { method: "GET", path: "/api/profile/:userId", status: "ported" },
   { method: "PUT", path: "/api/profile/:userId", status: "ported" },
@@ -36,29 +32,23 @@ export const ROUTE_COVERAGE: CoverageEntry[] = [
   { method: "POST", path: "/api/ice-servers", status: "ported" },
   { method: "GET", path: "/api/admin/stats/overview", status: "ported" },
   { method: "GET", path: "/api/admin/users", status: "ported" },
+  // Stage C: disconnectUser now reaches the user's live sockets (UserHub).
+  { method: "PATCH", path: "/api/admin/users/:id", status: "ported" },
+  { method: "DELETE", path: "/api/admin/users/:id", status: "ported" },
+  // Stage C: only the socket-ticket route of the matchmaking router — it is
+  // real-time transport (the browser needs a ticket to open a socket). The rest
+  // of that router is matchmaking and stays blocked below. Listed before the
+  // prefix entry so it wins.
+  { method: "POST", path: "/api/matchmaking/socket-ticket", status: "ported" },
 
   // --- Blocked ------------------------------------------------------------
-  {
-    method: "PATCH",
-    path: "/api/admin/users/:id",
-    status: "blocked",
-    blocker: "Suspending or banning must disconnect the user's live sockets (disconnectUser, Socket.IO). Skipping that would weaken the action.",
-    unblockedBy: "Stage C (Durable Object real-time)",
-  },
-  {
-    method: "DELETE",
-    path: "/api/admin/users/:id",
-    status: "blocked",
-    blocker: "Deleting a user must disconnect their live sockets (disconnectUser, Socket.IO).",
-    unblockedBy: "Stage C (Durable Object real-time)",
-  },
   {
     method: "*",
     path: "/api/auth",
     prefix: true,
     status: "blocked",
-    blocker: "Login/registration rate limits use Redis (checkLimitFailOpen) and the client IP. bcrypt CPU cost also needs checking on Workers.",
-    unblockedBy: "Stage C (rate-limit replacement)",
+    blocker: "The routes import the Redis rate limiter (checkLimitFailOpen) and key on the client IP. The Durable Object limiter now exists but is not wired to the HTTP routes yet. bcrypt CPU cost on Workers is also unmeasured.",
+    unblockedBy: "A later stage (limiter shim for HTTP routes, CF-Connecting-IP)",
   },
   {
     method: "*",
@@ -66,7 +56,7 @@ export const ROUTE_COVERAGE: CoverageEntry[] = [
     prefix: true,
     status: "blocked",
     blocker: "Redis rate limits plus verification video upload (R2, music-metadata, large bodies).",
-    unblockedBy: "Stage C (rate limits), Stage E (video upload)",
+    unblockedBy: "A later stage (limiter shim) and Stage E (video upload)",
   },
   {
     method: "*",
@@ -82,7 +72,7 @@ export const ROUTE_COVERAGE: CoverageEntry[] = [
     prefix: true,
     status: "blocked",
     blocker: "Redis rate limits, R2 media storage, image sanitising CPU, and Socket.IO pushes (dm:message, notification:new).",
-    unblockedBy: "Stages C and E",
+    unblockedBy: "A later stage (limiter shim) and Stage E",
   },
   {
     method: "*",
@@ -90,15 +80,15 @@ export const ROUTE_COVERAGE: CoverageEntry[] = [
     prefix: true,
     status: "blocked",
     blocker: "Redis rate limit, matchmaking-queue removal and socket disconnect on deletion, plus R2 media deletion.",
-    unblockedBy: "Stages C, D and E",
+    unblockedBy: "Stages D and E",
   },
   {
     method: "*",
     path: "/api/matchmaking",
     prefix: true,
     status: "blocked",
-    blocker: "Redis matchmaking queue, one-time socket tickets and rate limits.",
-    unblockedBy: "Stages C and D",
+    blocker: "Redis matchmaking queue and matchmaking rate limits (join, leave, status). Only socket-ticket is ported.",
+    unblockedBy: "Stage D",
   },
   {
     method: "*",
@@ -106,15 +96,15 @@ export const ROUTE_COVERAGE: CoverageEntry[] = [
     prefix: true,
     status: "blocked",
     blocker: "Redis rate limits and evidence image storage (local disk in the Express server).",
-    unblockedBy: "Stages C and E",
+    unblockedBy: "A later stage (limiter shim) and Stage E",
   },
   {
     method: "*",
     path: "/api/blocks",
     prefix: true,
     status: "blocked",
-    blocker: "Redis rate limits (checkLimitFailOpen).",
-    unblockedBy: "Stage C (rate-limit replacement)",
+    blocker: "Imports the Redis rate limiter (checkLimitFailOpen). The Durable Object limiter now exists but is not wired to the HTTP routes yet; nothing else blocks this router.",
+    unblockedBy: "A later stage (limiter shim for HTTP routes)",
   },
 ];
 

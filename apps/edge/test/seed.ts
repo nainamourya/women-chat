@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { inArray } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "../../server/src/db/schema";
@@ -57,5 +57,56 @@ export async function readUser(id: string) {
     return await db.query.users.findFirst({ where: (u, { eq }) => eq(u.id, id) });
   } finally {
     await client.end({ timeout: 2 });
+  }
+}
+
+// ---- Real-time fixtures: verified members, matches, and their cleanup ----------
+
+import type { InferInsertModel } from "drizzle-orm";
+
+export class Fixtures {
+  private client = postgres(guardedTestDatabaseUrl(), { max: 1 });
+  private db = drizzle(this.client, { schema });
+  private userIds: string[] = [];
+  private tag = randomUUID().slice(0, 8);
+  private n = 0;
+
+  /** A member who is allowed to use chat and calls, unless overridden. */
+  async member(overrides: Partial<InferInsertModel<typeof schema.users>> = {}) {
+    const i = ++this.n;
+    const [row] = await this.db
+      .insert(schema.users)
+      .values({
+        email: `edge-rt-${this.tag}-${i}@example.test`,
+        displayName: `Edge RT ${i}`,
+        ageConfirmed18: true,
+        verificationStatus: "verified",
+        ...overrides,
+      })
+      .returning();
+    this.userIds.push(row.id);
+    return row;
+  }
+
+  async match(userAId: string, userBId: string, status: "active" | "ended" = "active") {
+    const [row] = await this.db
+      .insert(schema.matches)
+      .values({ userAId, userBId, status, endedAt: status === "ended" ? new Date() : null })
+      .returning();
+    return row;
+  }
+
+  async messageCount(matchId: string): Promise<number> {
+    const rows = await this.db.select().from(schema.messages).where(eq(schema.messages.matchId, matchId));
+    return rows.length;
+  }
+
+  async setStatus(userId: string, accountStatus: "active" | "banned" | "suspended") {
+    await this.db.update(schema.users).set({ accountStatus }).where(eq(schema.users.id, userId));
+  }
+
+  async cleanup() {
+    if (this.userIds.length > 0) await this.db.delete(schema.users).where(inArray(schema.users.id, this.userIds));
+    await this.client.end({ timeout: 2 });
   }
 }
