@@ -5,7 +5,6 @@ import Image from "next/image";
 import { motion, MotionConfig, useReducedMotion } from "framer-motion";
 import { useSession } from "next-auth/react";
 import { FloatingDoodles } from "@/components/FloatingDoodles";
-import { Badge } from "@/components/ui/Badge";
 import girlArt from "../../public/char-girl.png";
 import girlArtDark from "../../public/char-girl-dark.png";
 
@@ -19,13 +18,14 @@ import girlArtDark from "../../public/char-girl-dark.png";
 // original pixels. The swap keys off the app's own `.dark` class on <html>
 // (set by ThemeProvider), not Tailwind's `dark:` variant, which here follows
 // the OS setting and would ignore the in-app theme toggle.
-function BrandCharacter({ className }: { className?: string }) {
+// Decorative by default (empty alt); pass `alt` only where the image adds meaning.
+function BrandCharacter({ className, alt = "" }: { className?: string; alt?: string }) {
   return (
     <>
-      <Image src={girlArt} alt="GiiGirl" className={`${className ?? ""} [.dark_&]:hidden`} />
+      <Image src={girlArt} alt={alt} className={`${className ?? ""} [.dark_&]:hidden`} />
       <Image
         src={girlArtDark}
-        alt="GiiGirl"
+        alt=""
         aria-hidden="true"
         className={`${className ?? ""} hidden [.dark_&]:block`}
       />
@@ -121,36 +121,36 @@ const trustPoints = [
   {
     icon: ShieldHeartIcon,
     title: "Women only, always",
-    body: "No men, no mixed matching, no exceptions. GiiGirl exists for one kind of conversation.",
+    body: "No men, no mixed spaces. Everyone you see, follow, message or video chat with is a verified woman.",
   },
   {
     icon: LockIcon,
-    title: "Private by default",
-    body: "Your profile is never public. Your verification video is deleted the moment it's reviewed.",
+    title: "Members only, not the whole internet",
+    body: "Your profile, posts and messages are visible only to verified members — never to search engines or strangers. Your verification video is deleted as soon as it's reviewed.",
   },
   {
     icon: ChatHeartIcon,
-    title: "No swiping, no pressure",
-    body: "You're paired one-on-one for a real conversation — not a feed to scroll or a grid to browse.",
+    title: "You're in control",
+    body: "Block or report anyone in a tap — reports go to a real person. Leave any chat or call whenever you like, no explanation needed.",
   },
 ];
 
 const steps = [
   {
     title: "Create your account",
-    body: "Sign up with email or Google. Takes under a minute.",
+    body: "Sign up with email or Google. Takes about a minute.",
   },
   {
-    title: "Quick eligibility check",
-    body: "Record a short intro video. A real person reviews it — usually within a day.",
+    title: "Get verified",
+    body: "Record a short intro video. A real person reviews it — usually within a day — and then the video is deleted.",
   },
   {
-    title: "Get matched",
-    body: "Once you're verified, we pair you with another verified woman who's free to talk.",
+    title: "Make it yours",
+    body: "Pick a username, add a photo, follow women you like and share your first post.",
   },
   {
-    title: "Start the conversation",
-    body: "Chat privately, one-on-one. End it anytime, no explanation needed.",
+    title: "Talk your way",
+    body: "Message privately, or tap Find someone for a one-to-one video chat with another verified woman.",
   },
 ];
 
@@ -163,22 +163,16 @@ export default function Home() {
   const { data: session, status } = useSession();
   const authed = status === "authenticated" && session;
 
-  const primaryCta =
-    status === "loading" ? null : authed ? (
-      <Link
-        href="/match"
-        className="rounded-full bg-accent px-6 py-3 text-center text-sm font-semibold text-accent-foreground shadow-md transition-transform hover:-translate-y-0.5 hover:bg-accent-hover"
-      >
-        Find someone to talk to
-      </Link>
-    ) : (
-      <Link
-        href="/signup"
-        className="rounded-full bg-accent px-6 py-3 text-center text-sm font-semibold text-accent-foreground shadow-md transition-transform hover:-translate-y-0.5 hover:bg-accent-hover"
-      >
-        Find someone to talk to
-      </Link>
-    );
+  // Always rendered (also while the session loads and in the server HTML), so
+  // first-time visitors and crawlers always see a way to join.
+  const primaryCta = (
+    <Link
+      href={authed ? "/feed" : "/signup"}
+      className="rounded-full bg-accent px-6 py-3 text-center text-sm font-semibold text-accent-foreground shadow-md transition-transform hover:-translate-y-0.5 hover:bg-accent-hover"
+    >
+      {authed ? "Go to your feed" : "Join GiiGirl — it's free"}
+    </Link>
+  );
 
   return (
     <MotionConfig reducedMotion="user">
@@ -198,12 +192,12 @@ export default function Home() {
                 <br className="hidden sm:block" /> A little less alone.
               </h1>
               <p className="max-w-md text-base leading-relaxed text-muted">
-                Meet another adult woman for a genuine, one-to-one conversation. No swiping, no
-                public feed — just a welcoming space to talk.
+                A social space only for women. Share posts, make friends, message privately — or
+                video chat one-to-one with another verified woman. Not a dating app.
               </p>
 
               <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
-                {primaryCta ?? <div className="h-[46px] w-44" aria-hidden="true" />}
+                {primaryCta}
                 <a
                   href="#how-it-works"
                   className="rounded-full border border-border px-6 py-3 text-center text-sm font-semibold text-foreground transition-transform hover:-translate-y-0.5 hover:bg-surface-hover"
@@ -213,7 +207,7 @@ export default function Home() {
               </div>
 
               <p className="text-xs text-muted">
-                For adults 18+ · Human-reviewed eligibility · Private conversations
+                Women only · 18+ · Every member reviewed by a person
               </p>
             </motion.div>
 
@@ -229,7 +223,10 @@ export default function Home() {
               </div>
               <FloatingHeart className="absolute top-[18%] right-[6%] h-4 w-4 md:top-[8%] md:right-[18%] md:h-5 md:w-5" delay={0.3} />
               <FloatingHeart className="absolute bottom-[10%] left-[10%] h-4 w-4 md:bottom-[14%] md:left-[20%]" delay={1.1} />
-              <BrandCharacter className="w-[62%] max-w-[220px] drop-shadow-xl md:w-[72%] md:max-w-sm" />
+              <BrandCharacter
+                alt="GiiGirl mascot: a smiling girl resting her chin on her hands, surrounded by hearts"
+                className="w-[62%] max-w-[220px] drop-shadow-xl md:w-[72%] md:max-w-sm"
+              />
             </motion.div>
           </div>
         </section>
@@ -250,8 +247,8 @@ export default function Home() {
                 Built to feel safe, not just say it
               </h2>
               <p className="max-w-xs text-sm leading-relaxed text-muted">
-                Most apps ask you to trust a policy. GiiGirl is built so there&apos;s nothing
-                risky to trust in the first place.
+                Most apps ask you to trust a policy. On GiiGirl, a real person checks every
+                member before she can post, message or call.
               </p>
             </motion.div>
 
@@ -336,32 +333,41 @@ export default function Home() {
               viewport={{ once: true, margin: "-80px" }}
               variants={fadeUp}
               transition={{ duration: 0.5, delay: 0.1 }}
-              className="mx-auto grid max-w-3xl gap-6 sm:grid-cols-2"
+              className="mx-auto grid max-w-4xl gap-6 sm:grid-cols-3"
             >
               <div className="flex flex-col gap-3 rounded-2xl border border-border bg-background p-5">
-                <span className="text-xs font-semibold text-muted">Eligibility status</span>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-foreground">Eligibility verification</span>
-                  <Badge variant="success">Verified</Badge>
+                <span className="text-xs font-semibold text-muted">Feed</span>
+                <div className="flex items-center gap-2">
+                  <span className="h-7 w-7 rounded-full bg-lavender" aria-hidden="true" />
+                  <span className="text-sm font-semibold text-foreground">@sunny.days</span>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-foreground">Profile</span>
-                  <Badge variant="success">Complete</Badge>
-                </div>
+                <div className="h-24 rounded-xl bg-surface-hover" aria-hidden="true" />
+                <p className="text-sm text-foreground">First pottery class today — so proud of this wonky little bowl 🏺</p>
+                <span className="text-xs text-muted">♥ 24 · 6 comments</span>
               </div>
 
               <div className="flex flex-col gap-2.5 rounded-2xl border border-border bg-background p-5">
-                <span className="text-xs font-semibold text-muted">Private chat</span>
+                <span className="text-xs font-semibold text-muted">Messages</span>
                 <div className="flex justify-start">
-                  <div className="max-w-[80%] rounded-2xl bg-surface-hover px-3.5 py-2 text-sm text-foreground">
-                    Hi! Thanks for matching with me 😊
+                  <div className="max-w-[85%] rounded-2xl bg-surface-hover px-3.5 py-2 text-sm text-foreground">
+                    Loved your bowl! Which studio is it? 😊
                   </div>
                 </div>
                 <div className="flex justify-end">
-                  <div className="max-w-[80%] rounded-2xl bg-brand px-3.5 py-2 text-sm text-brand-foreground">
-                    Hey! Nice to meet you too
+                  <div className="max-w-[85%] rounded-2xl bg-brand px-3.5 py-2 text-sm text-brand-foreground">
+                    Thank you! I&apos;ll send you the link
                   </div>
                 </div>
+              </div>
+
+              <div className="flex flex-col gap-3 rounded-2xl border border-border bg-background p-5">
+                <span className="text-xs font-semibold text-muted">Find someone</span>
+                <div className="flex flex-1 flex-col items-center justify-center gap-2 rounded-xl bg-surface-hover p-4 text-center">
+                  <span className="text-2xl" aria-hidden="true">📹</span>
+                  <span className="text-sm font-semibold text-foreground">You&apos;re matched!</span>
+                  <span className="text-xs text-muted">One-to-one video chat with a verified woman</span>
+                </div>
+                <span className="text-xs text-muted">Leave anytime · Block or report in one tap</span>
               </div>
             </motion.div>
           </div>
@@ -380,12 +386,11 @@ export default function Home() {
               Your next good conversation starts here.
             </h2>
             <p className="max-w-sm text-sm text-muted">
-              Take the first step toward a space designed for women to connect, share, and talk.
+              Join a space designed for women to share, connect and talk — safely.
             </p>
-            {primaryCta && <div className="mt-2">{primaryCta}</div>}
+            <div className="mt-2">{primaryCta}</div>
             <p className="mt-1 text-xs text-muted">
-              For adults 18+. Every new member goes through a quick, human-reviewed eligibility
-              check.
+              For women 18+. Every new member is reviewed by a real person. Not a dating app.
             </p>
           </div>
         </section>

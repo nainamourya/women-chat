@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Logo } from "./Logo";
+import { FooterAccountLinks } from "./FooterAccountLinks";
 
 export function SiteFooter() {
   return (
@@ -8,7 +9,7 @@ export function SiteFooter() {
         <div className="flex flex-col gap-3">
           <Logo />
           <p className="max-w-xs text-sm text-muted">
-            A women-only space for real conversation — reviewed by a person, never an algorithm.
+            A women-only social space. Every member is reviewed by a real person.
           </p>
         </div>
 
@@ -22,8 +23,7 @@ export function SiteFooter() {
 
           <div className="flex flex-col gap-2.5">
             <span className="text-sm font-semibold text-foreground">Account</span>
-            <FooterLink href="/login">Log in</FooterLink>
-            <FooterLink href="/eligibility">Eligibility status</FooterLink>
+            <FooterAccountLinks />
           </div>
 
           <div className="flex flex-col gap-2.5">

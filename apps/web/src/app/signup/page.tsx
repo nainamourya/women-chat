@@ -18,6 +18,7 @@ export default function SignupPage() {
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [ageConfirmed18, setAgeConfirmed18] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -78,11 +79,20 @@ export default function SignupPage() {
       <Mascot mood="wave" size="sm" className="mb-3 self-start" />
       <h1 className="mb-1 text-2xl font-semibold text-foreground">Create your account</h1>
       <p className="mb-6 text-sm text-muted">
-        This platform is for adult women (18+) only. Eligibility verification is
-        currently a prototype/test flow, not a real identity check.
+        GiiGirl is for women aged 18 and over. After you sign up, you&apos;ll record a short
+        intro video. A real person reviews it — usually within a day — and then it&apos;s
+        deleted. Once you&apos;re verified, you can post, message and video chat.
       </p>
 
       <Card className="flex flex-col gap-5 p-6">
+        <p className="text-xs text-muted">
+          By continuing, you agree to our{" "}
+          <Link href="/terms" className="font-medium text-brand hover:text-brand-hover">Terms</Link>,{" "}
+          <Link href="/privacy" className="font-medium text-brand hover:text-brand-hover">Privacy Policy</Link>{" "}
+          and{" "}
+          <Link href="/guidelines" className="font-medium text-brand hover:text-brand-hover">Community Guidelines</Link>.
+        </p>
+
         <Button
           type="button"
           variant="secondary"
@@ -119,6 +129,7 @@ export default function SignupPage() {
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <Input
             label="Display name"
+            hint="Shown to other verified members."
             type="text"
             required
             minLength={2}
@@ -138,7 +149,7 @@ export default function SignupPage() {
 
           <Input
             label="Password"
-            type="password"
+            type={showPassword ? "text" : "password"}
             required
             minLength={8}
             autoComplete="new-password"
@@ -146,6 +157,15 @@ export default function SignupPage() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
+          <label className="-mt-2 flex items-center gap-2 text-xs text-muted">
+            <input
+              type="checkbox"
+              checked={showPassword}
+              onChange={(e) => setShowPassword(e.target.checked)}
+              className="accent-[var(--brand)]"
+            />
+            Show password
+          </label>
 
           <label className="flex items-start gap-2 text-sm text-foreground">
             <input
