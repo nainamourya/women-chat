@@ -9,6 +9,7 @@ import { EmptyState, LoadMore, LoadingRows, SocialPage } from "@/components/soci
 import { social, timeAgo, type NotificationItem, type Page } from "@/lib/social/api";
 import { refreshUnreadCounts } from "@/lib/social/unreadCounts";
 import { usePagedList } from "@/lib/social/usePagedList";
+import { PushToggle } from "@/components/PushToggle";
 
 function describe(n: NotificationItem): string {
   switch (n.type) {
@@ -48,6 +49,7 @@ export function NotificationsClient() {
 
   return (
     <SocialPage title="Notifications">
+      <PushToggle />
       {list.status === "loading" && <LoadingRows label="Loading notifications" />}
       {list.status === "error" && list.error && <GateNotice error={list.error} onResolved={list.reload} onRetry={list.reload} />}
       {list.status === "ready" && list.items.length === 0 && (

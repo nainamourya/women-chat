@@ -528,3 +528,29 @@ export const notifications = pgTable(
 );
 
 export type Notification = typeof notifications.$inferSelect;
+
+// Web Push: one row per browser/device a member turned notifications on for.
+// `endpoint` is the push service URL the browser handed out (unique per
+// device); p256dh/auth are that browser's public encryption keys (not secrets
+// of ours — the browser shares them so we can encrypt for it). Rows are removed
+// when the member turns notifications off or logs out on that device, when the
+// push service says the subscription is gone (404/410), and with the account.
+export const pushSubscriptions = pgTable(
+  "push_subscriptions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    endpoint: text("endpoint").notNull(),
+    p256dh: text("p256dh").notNull(),
+    auth: text("auth").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("push_subscriptions_endpoint_unique").on(table.endpoint),
+    index("push_subscriptions_user_idx").on(table.userId),
+  ],
+);
+
+export type PushSubscriptionRow = typeof pushSubscriptions.$inferSelect;

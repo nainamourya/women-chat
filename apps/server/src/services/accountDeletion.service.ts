@@ -10,6 +10,7 @@ import {
   notifications,
   postLikes,
   posts,
+  pushSubscriptions,
   reports,
   userInterests,
   userProfiles,
@@ -150,6 +151,8 @@ export async function deleteAccount(userId: string): Promise<{ alreadyDeleted: b
     // Profile text and interests are personal data too.
     await tx.update(userProfiles).set({ bio: null, updatedAt: new Date() }).where(eq(userProfiles.userId, userId));
     await tx.delete(userInterests).where(eq(userInterests.userId, userId));
+    // No more push notifications to any of this account's devices.
+    await tx.delete(pushSubscriptions).where(eq(pushSubscriptions.userId, userId));
 
     // Anonymize rather than delete the user row (see file-level comment).
     // The tombstone email embeds this user's own id, guaranteeing it can

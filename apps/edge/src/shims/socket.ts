@@ -1,4 +1,5 @@
 import { getRequestContext, hubFor } from "../realtime/env";
+import { isPushKind, sendPushToUser } from "../push/send";
 
 // Build-time replacement for apps/server/src/socket/index.ts (see
 // scripts/build.mjs), for the server code that is reused unchanged: the
@@ -14,6 +15,13 @@ export function emitToUser(userId: string, event: string, payload: unknown): voi
       .emit(event, payload)
       .catch(() => console.error("Failed to push a real-time event (best effort).")),
   );
+  // Every new notification (follow, like, comment, message) also goes to the
+  // member's phones/browsers that turned on push notifications. Best effort and
+  // off the response path, exactly like the real-time event above.
+  const kind = (payload as { type?: unknown } | null)?.type;
+  if (event === "notification:new" && isPushKind(kind)) {
+    ctx.waitUntil(sendPushToUser(env, userId, kind));
+  }
 }
 
 /**

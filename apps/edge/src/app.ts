@@ -11,6 +11,7 @@ import { findBlocked } from "./routeCoverage";
 import { requireInternalSecret } from "../../server/src/middleware/internalAuth";
 import { getRequestContext, limiterFor } from "./realtime/env";
 import { registerTestHooks } from "./testHooks";
+import { pushRouter } from "./push/router";
 import { interestsRouter } from "../../server/src/routes/interests";
 import { profileRouter } from "../../server/src/routes/profile";
 import { iceServersRouter } from "../../server/src/routes/iceServers";
@@ -141,3 +142,5 @@ app.use("/api/social", socialRouter);
 app.use("/api/account", accountRouter);
 app.use("/api/verification", verificationRouter);
 app.use("/api/admin/verification", adminVerificationRouter);
+// Worker-only: Web Push subscriptions (see src/push).
+app.use("/api/push", pushRouter);

@@ -121,6 +121,12 @@ export class Fixtures {
       .where(and(eq(schema.matches.status, "active"), or(eq(schema.matches.userAId, userId), eq(schema.matches.userBId, userId))));
   }
 
+  /** Push subscription endpoints saved for one member. */
+  async pushEndpoints(userId: string): Promise<string[]> {
+    const rows = await this.db.select().from(schema.pushSubscriptions).where(eq(schema.pushSubscriptions.userId, userId));
+    return rows.map((r) => r.endpoint).sort();
+  }
+
   async cleanup() {
     if (this.userIds.length > 0) {
       // Rows that reference an admin without cascading must go first.

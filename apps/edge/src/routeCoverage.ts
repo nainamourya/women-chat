@@ -88,6 +88,10 @@ export const ROUTE_COVERAGE: CoverageEntry[] = [
     edgeOnly: true,
   },
   { method: "*", path: "/api/verification", prefix: true, status: "ported" },
+  // Web Push (no Express equivalent).
+  { method: "GET", path: "/api/push/public-key", status: "ported", edgeOnly: true },
+  { method: "POST", path: "/api/push/subscribe", status: "ported", edgeOnly: true },
+  { method: "POST", path: "/api/push/unsubscribe", status: "ported", edgeOnly: true },
 ];
 
 function segments(p: string): string[] {

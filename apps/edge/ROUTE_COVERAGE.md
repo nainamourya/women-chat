@@ -39,6 +39,9 @@ unauthenticated caller still gets 401). Nothing is stubbed to succeed.
 | PUT | /api/verification/video/:userId | **Worker-only replacement** for the base64 upload: the raw video is streamed into R2. See `STORAGE.md`. |
 | POST | /api/verification/video-authorization/check | **Worker-only**, internal secret. The rate limit (per user and, when supplied, per IP) for minting upload authorizations; see `STAGING.md`. |
 | PUT | /api/verification/video-upload | **Worker-only** direct browser upload, authorized by a short-lived signed one-time token (not the internal secret), CORS for the configured web origin only. See `STORAGE.md`. |
+| GET | /api/push/public-key | **Worker-only**, internal secret. The VAPID public key for Web Push; 404 when push is not configured. |
+| POST | /api/push/subscribe | **Worker-only**, internal secret + `x-viewer-id`. Saves this device's push subscription (known push services only, max 10 devices per member). |
+| POST | /api/push/unsubscribe | **Worker-only**, internal secret + `x-viewer-id`. Removes one of the caller's own subscriptions (turning off, or logging out). |
 
 ## Blocked (answer 501)
 

@@ -47,6 +47,12 @@ export function SiteHeader() {
                 Eligibility
               </Link>
             </nav>
+            <Link href="/post/new" aria-label="New post" title="New post" className="text-foreground hover:text-brand">
+              <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+                <rect x="3.5" y="3.5" width="17" height="17" rx="5" />
+                <path strokeLinecap="round" d="M12 8v8M8 12h8" />
+              </svg>
+            </Link>
             <Link href="/notifications" aria-label="Notifications" className="relative text-foreground hover:text-brand">
               <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 9a6 6 0 1 1 12 0c0 5 2 6.5 2 6.5H4S6 14 6 9zM10 19a2 2 0 0 0 4 0" />

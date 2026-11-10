@@ -6,6 +6,8 @@ import type { Session } from "next-auth";
 import { signOut } from "next-auth/react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useIsAdmin } from "@/lib/useIsAdmin";
+import { InstallAppMenuItem } from "./InstallAppMenuItem";
+import { disablePush } from "@/lib/push";
 
 function SettingsIcon({ className }: { className?: string }) {
   return (
@@ -143,10 +145,14 @@ export function AccountMenu({ session }: { session: Session }) {
                   Admin
                 </MenuLink>
               )}
+              <InstallAppMenuItem onDone={close} />
               <button
                 type="button"
-                onClick={() => {
+                onClick={async () => {
                   close();
+                  // Stop notifications on this device first (shared phones),
+                  // while the session still exists to authorize it.
+                  await disablePush();
                   signOut({ callbackUrl: "/" });
                 }}
                 className="flex cursor-pointer items-center gap-2.5 rounded-md px-3 py-2 text-left text-sm text-danger hover:bg-danger-bg"

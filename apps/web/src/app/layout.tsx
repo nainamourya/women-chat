@@ -1,10 +1,11 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Baloo_2 } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 import { SiteHeader } from "@/components/SiteHeader";
 import { BottomNav } from "@/components/BottomNav";
 import { SiteFooter } from "@/components/SiteFooter";
+import { PwaSetup } from "@/components/PwaSetup";
 import { THEME_STORAGE_KEY } from "@/lib/theme";
 
 // Runs before hydration (and before first paint) so the page never flashes
@@ -48,22 +49,24 @@ const siteUrl = "https://www.giigirl.com";
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "GiiGirl — A women-only space for real conversation",
+    default: "GiiGirl — A women-only social space",
     template: "%s — GiiGirl",
   },
   description:
-    "GiiGirl pairs adult women (18+) for private, judgment-free conversation. Every member is reviewed by a real person before they can chat — no bots, no swiping, no men.",
+    "GiiGirl is a social app only for women (18+). Share posts, make friends, message privately or video chat one-to-one. Every member is reviewed by a real person — no bots, no men, not a dating app.",
   keywords: [
+    "women only social app",
     "women only chat app",
     "safe space for women",
-    "talk to women online",
-    "women's peer support",
-    "anonymous chat for women",
+    "make friends with women online",
+    "women's community app",
   ],
+  applicationName: "GiiGirl",
+  appleWebApp: { capable: true, title: "GiiGirl", statusBarStyle: "default" },
   openGraph: {
-    title: "GiiGirl — A women-only space for real conversation",
+    title: "GiiGirl — A women-only social space",
     description:
-      "Private, judgment-free conversation with other adult women. Every member is reviewed by a real person before they can chat.",
+      "Share, message and video chat with other verified women. Every member is reviewed by a real person.",
     url: siteUrl,
     siteName: "GiiGirl",
     images: [{ url: "/giigirl-logo.png", width: 1200, height: 630 }],
@@ -72,11 +75,19 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "GiiGirl — A women-only space for real conversation",
-    description: "Private, judgment-free conversation with other adult women.",
+    title: "GiiGirl — A women-only social space",
+    description: "Share, message and video chat with other verified women.",
     images: ["/giigirl-logo.png"],
   },
   robots: { index: true, follow: true },
+};
+
+// Colors the phone's status bar / browser bar to match the app.
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#fff5fa" },
+    { media: "(prefers-color-scheme: dark)", color: "#17111f" },
+  ],
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -100,6 +111,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <div className="flex flex-1 flex-col bg-background pb-20 sm:pb-0">{children}</div>
           <SiteFooter />
           <BottomNav />
+          <PwaSetup />
         </Providers>
       </body>
     </html>
