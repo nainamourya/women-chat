@@ -136,6 +136,16 @@ describe("wrangler.jsonc production environment", () => {
     for (const binding of production.durable_objects.bindings) expect(binding.script_name).toBeUndefined();
   });
 
+  // A deploy without these two plain vars wipes them and the Worker fails closed
+  // (503 on everything) — this happened once on 2026-11-10.
+  it("has a deploy script that always sets NODE_ENV and the exact CORS origins", () => {
+    const pkg = JSON.parse(readFileSync(path.join(edgeDir, "package.json"), "utf8"));
+    const script: string = pkg.scripts["deploy:production"];
+    expect(script).toContain("--env production");
+    expect(script).toContain("--var NODE_ENV:production");
+    expect(script).toContain('"CORS_ORIGIN:https://www.giigirl.com,https://women-chat.vercel.app"');
+  });
+
   it("uses the production Hyperdrive config and the existing production bucket", () => {
     expect(production.hyperdrive).toHaveLength(1);
     expect(production.hyperdrive[0].id).toBe("4682ff8c403c46c087e4dbe86fbf3207");

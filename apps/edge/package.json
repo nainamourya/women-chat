@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "deploy:production": "wrangler deploy --env production --var NODE_ENV:production --var \"CORS_ORIGIN:https://www.giigirl.com,https://women-chat.vercel.app\""
   },
   "dependencies": {
     "drizzle-orm": "^0.45.3",
