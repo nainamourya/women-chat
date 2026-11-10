@@ -37,7 +37,13 @@ function parseJsonc(text: string): any {
 
 const config = parseJsonc(raw);
 const staging = config.env?.staging;
+const production = config.env?.production;
 const HEX32 = /^[0-9a-f]{32}$/;
+const bindingNames = (c: any) => ({
+  hyperdrive: (c.hyperdrive ?? []).map((b: any) => b.binding),
+  r2: (c.r2_buckets ?? []).map((b: any) => b.binding),
+  durable: (c.durable_objects?.bindings ?? []).map((b: any) => `${b.name}:${b.class_name}`),
+});
 
 describe("wrangler.jsonc staging environment", () => {
   it("exists, with its own Worker name (so its Durable Object namespaces are its own)", () => {
@@ -97,9 +103,15 @@ describe("wrangler.jsonc staging environment", () => {
     expect(raw).not.toMatch(/rediss?:\/\//i);
     expect(raw).not.toMatch(/https?:\/\//i);
     expect(raw).not.toMatch(/(secret|password|token|credential)"?\s*:/i);
-    // The only 32-character ids in the file are the two Hyperdrive ids (not secrets).
+    // The only 32-character ids in the file are the Hyperdrive ids (not secrets).
     const hexIds = (raw.match(/\b[0-9a-f]{32}\b/gi) ?? []).sort();
-    expect(hexIds).toEqual([config.hyperdrive[0].id, staging.hyperdrive[0].id].sort());
+    expect(hexIds).toEqual([config.hyperdrive[0].id, staging.hyperdrive[0].id, production.hyperdrive[0].id].sort());
+  });
+
+  it("never shares a resource with production", () => {
+    expect(staging.name).not.toBe(production.name);
+    expect(staging.hyperdrive[0].id).not.toBe(production.hyperdrive[0].id);
+    expect(staging.r2_buckets[0].bucket_name).not.toBe(production.r2_buckets[0].bucket_name);
   });
 
   it("checklist docs require --env staging, a staging-only database and a stable CORS origin", () => {
@@ -107,5 +119,29 @@ describe("wrangler.jsonc staging environment", () => {
     for (const needle of ["--env staging", "UPLOAD_TOKEN_SECRET", "CORS_ORIGIN", "NEXT_PUBLIC_SOCKET_URL", "SERVER_URL", "/api/health/ready"]) {
       expect(doc).toContain(needle);
     }
+  });
+});
+
+describe("wrangler.jsonc production environment", () => {
+  it("exists, with its own Worker name, workers.dev only", () => {
+    expect(production).toBeDefined();
+    expect(production.name).toBe("giigirl-edge-production");
+    expect(production.name).not.toBe(config.name);
+    expect(production.workers_dev).toBe(true);
+  });
+
+  it("declares the same bindings and Durable Object migrations as the base config", () => {
+    expect(bindingNames(production)).toEqual(bindingNames(config));
+    expect(production.migrations).toEqual(config.migrations);
+    for (const binding of production.durable_objects.bindings) expect(binding.script_name).toBeUndefined();
+  });
+
+  it("uses the production Hyperdrive config and the existing production bucket", () => {
+    expect(production.hyperdrive).toHaveLength(1);
+    expect(production.hyperdrive[0].id).toBe("4682ff8c403c46c087e4dbe86fbf3207");
+    expect(production.hyperdrive[0].id).not.toBe(config.hyperdrive[0].id);
+    expect(production.r2_buckets).toHaveLength(1);
+    expect(production.r2_buckets[0].bucket_name).toBe("giigril-verification-videos");
+    expect(production.vars).toBeUndefined();
   });
 });

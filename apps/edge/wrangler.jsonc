@@ -68,6 +68,29 @@
         { "tag": "v1", "new_sqlite_classes": ["Conn", "UserHub", "TicketStore", "Limiter"] },
         { "tag": "v2", "new_sqlite_classes": ["Matchmaker"] }
       ]
+    },
+    // Production. Its own Worker name (so its own Durable Object namespaces), the
+    // production Hyperdrive config and the existing production bucket (same object
+    // keys as the Express server, so existing files stay readable). workers.dev
+    // only: no routes or custom domains. Deploy only with --env production.
+    "production": {
+      "name": "giigirl-edge-production",
+      "workers_dev": true,
+      "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "4682ff8c403c46c087e4dbe86fbf3207" }],
+      "r2_buckets": [{ "binding": "PRIVATE_BUCKET", "bucket_name": "giigril-verification-videos" }],
+      "durable_objects": {
+        "bindings": [
+          { "name": "CONN", "class_name": "Conn" },
+          { "name": "USER_HUB", "class_name": "UserHub" },
+          { "name": "TICKETS", "class_name": "TicketStore" },
+          { "name": "LIMITER", "class_name": "Limiter" },
+          { "name": "MATCHMAKER", "class_name": "Matchmaker" }
+        ]
+      },
+      "migrations": [
+        { "tag": "v1", "new_sqlite_classes": ["Conn", "UserHub", "TicketStore", "Limiter"] },
+        { "tag": "v2", "new_sqlite_classes": ["Matchmaker"] }
+      ]
     }
   },
   // Environment variables (NODE_ENV, CORS_ORIGIN, INTERNAL_API_SECRET, the
