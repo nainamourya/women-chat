@@ -71,7 +71,20 @@ export async function enablePush(): Promise<PushStatus> {
     await sub.unsubscribe();
     sub = null;
   }
-  sub ??= await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(key) });
+  if (!sub) {
+    try {
+      sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(key) });
+    } catch {
+      // Brave ships with Google's push service switched off, which makes
+      // subscribe() fail with "Registration failed - push service error".
+      const isBrave = Boolean((navigator as Navigator & { brave?: unknown }).brave);
+      throw new Error(
+        isBrave
+          ? "Brave blocks notifications by default. Open brave://settings/privacy, turn on “Use Google services for push messaging”, restart Brave and try again."
+          : "Your browser couldn't turn on notifications. Please try again, or try Chrome, Edge, Firefox or Safari.",
+      );
+    }
+  }
 
   const res = await fetch("/api/push/subscribe", {
     method: "POST",

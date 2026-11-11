@@ -76,6 +76,10 @@
     "production": {
       "name": "giigirl-edge-production",
       "workers_dev": true,
+      // giigirl-production-db → Neon branch "production" (ep-noisy-feather…), the
+      // same database Render uses. NOT apps/server/.env, which is the Neon
+      // "development" branch (ep-falling-unit…); 99951ea7… points there and
+      // must never be used for production.
       "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "4682ff8c403c46c087e4dbe86fbf3207" }],
       "r2_buckets": [{ "binding": "PRIVATE_BUCKET", "bucket_name": "giigril-verification-videos" }],
       "durable_objects": {

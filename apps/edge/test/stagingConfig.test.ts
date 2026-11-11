@@ -148,7 +148,12 @@ describe("wrangler.jsonc production environment", () => {
 
   it("uses the production Hyperdrive config and the existing production bucket", () => {
     expect(production.hyperdrive).toHaveLength(1);
+    // giigirl-production-db: Neon branch "production" (ep-noisy-feather), the same
+    // database Render uses.
     expect(production.hyperdrive[0].id).toBe("4682ff8c403c46c087e4dbe86fbf3207");
+    // 99951ea7… points at the Neon "development" branch (apps/server/.env). It
+    // was used by mistake on 2026-11-11 and must never come back.
+    expect(production.hyperdrive[0].id).not.toBe("99951ea7e4254312891bbb35730e41f8");
     expect(production.hyperdrive[0].id).not.toBe(config.hyperdrive[0].id);
     expect(production.r2_buckets).toHaveLength(1);
     expect(production.r2_buckets[0].bucket_name).toBe("giigril-verification-videos");
