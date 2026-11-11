@@ -119,7 +119,8 @@ export default function PrivacyPage() {
             public web addresses. Anyone who can see a photo could still save it or take a screenshot.
           </li>
           <li>
-            Following needs no approval, and there are no private accounts at the moment. You cannot hide
+            Following (called &ldquo;adding to your circle&rdquo; in the app) needs no approval, and there
+            are no private accounts at the moment. You cannot hide
             your profile from verified members other than by blocking them.
           </li>
           <li>

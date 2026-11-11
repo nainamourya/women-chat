@@ -101,7 +101,7 @@ export function ShareDialog({ open, onClose, postId }: { open: boolean; onClose:
           {loadError && <Alert variant="danger">{loadError}</Alert>}
           {!loadError && people === null && <p className="text-sm text-muted">Loading…</p>}
           {people !== null && people.length === 0 && (
-            <p className="text-sm text-muted">You can message members who follow you and whom you follow back. None yet.</p>
+            <p className="text-sm text-muted">You can message women you&apos;ve added to your circle who have added you back. None yet.</p>
           )}
           <ul className="flex max-h-56 flex-col gap-2 overflow-y-auto">
             {people?.map((c) => (

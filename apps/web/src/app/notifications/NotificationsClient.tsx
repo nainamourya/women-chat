@@ -14,7 +14,7 @@ import { PushToggle } from "@/components/PushToggle";
 function describe(n: NotificationItem): string {
   switch (n.type) {
     case "follow":
-      return "started following you.";
+      return "added you to her circle.";
     case "like":
       return "liked your post.";
     case "comment":
@@ -53,7 +53,7 @@ export function NotificationsClient() {
       {list.status === "loading" && <LoadingRows label="Loading notifications" />}
       {list.status === "error" && list.error && <GateNotice error={list.error} onResolved={list.reload} onRetry={list.reload} />}
       {list.status === "ready" && list.items.length === 0 && (
-        <EmptyState title="Nothing new yet" body="You'll see new followers, likes, comments and messages here." />
+        <EmptyState title="Nothing new yet" body="You'll see who added you to her circle, likes, comments and messages here." />
       )}
       <ul className="flex flex-col gap-2">
         {list.items.map((n) => (

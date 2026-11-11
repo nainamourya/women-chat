@@ -63,9 +63,9 @@ export default function GuidelinesPage() {
 
       <LegalSection title="Reporting and blocking">
         <p>
-          You can end a call or chat, move on with &ldquo;Not for me&rdquo;, unfollow someone, block them, or
-          report them. Blocking someone removes any follows between you, and they can no longer see your
-          profile or posts, follow you or message you. You can report a member or a single post. Reports can
+          You can end a call or chat, move on with &ldquo;Not for me&rdquo;, remove someone from your circle, block
+          them, or report them. Blocking someone removes you from each other&apos;s circles, and they can no
+          longer see your profile or posts, add you or message you. You can report a member or a single post. Reports can
           be about harassment, sexual or inappropriate behaviour, someone who does not seem eligible, a fake
           profile, spam or scams, threatening or unsafe behaviour, or something else. You can add a
           description.

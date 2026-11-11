@@ -28,7 +28,7 @@ export function FeedClient() {
       {feed.status === "ready" && feed.items.length === 0 && (
         <EmptyState
           title="Your feed is empty"
-          body="Posts from people you follow show up here. Find members to follow, or share your first photo."
+          body="Posts from women in your circle show up here. Find women to add, or share your first photo."
           action={{ href: "/discover", label: "Find people" }}
         />
       )}

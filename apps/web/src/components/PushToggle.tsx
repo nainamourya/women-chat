@@ -57,7 +57,7 @@ export function PushToggle() {
             {status === "blocked" &&
               "Notifications are blocked for GiiGirl in your browser settings. Allow them there, then come back."}
             {(status === "on" || status === "off") &&
-              "New messages, comments, likes and followers. For your privacy, notifications never show names or message text on your lock screen."}
+              "New messages, comments, likes and circle adds. For your privacy, notifications never show names or message text on your lock screen."}
           </p>
         </div>
       </div>

@@ -40,7 +40,7 @@ export function FollowButton({
   return (
     <span className="inline-flex flex-col items-start gap-1">
       <Button type="button" size={size} variant={isFollowing ? "outline" : "primary"} loading={busy} onClick={toggle}>
-        {isFollowing ? "Following" : followsYou ? "Follow back" : "Follow"}
+        {isFollowing ? "In circle ✓" : followsYou ? "Add back" : "Add"}
       </Button>
       {error && (
         <span role="alert" className="text-xs text-danger">

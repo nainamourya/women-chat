@@ -121,7 +121,7 @@ const trustPoints = [
   {
     icon: ShieldHeartIcon,
     title: "Women only, always",
-    body: "No men, no mixed spaces. Everyone you see, follow, message or video chat with is a verified woman.",
+    body: "No men, no mixed spaces. Everyone you see, add to your circle, message or video chat with is a verified woman.",
   },
   {
     icon: LockIcon,
@@ -146,7 +146,7 @@ const steps = [
   },
   {
     title: "Make it yours",
-    body: "Pick a username, add a photo, follow women you like and share your first post.",
+    body: "Pick a username, add a photo, build your circle and share your first post.",
   },
   {
     title: "Talk your way",

@@ -173,7 +173,7 @@ export function ConversationClient({ conversationId }: { conversationId: string 
 
       {!info.canSend ? (
         <p className="mt-3 rounded-md bg-surface-hover px-3 py-2 text-sm text-muted">
-          You can only send messages while you and @{info.other.username} follow each other. Your earlier messages stay here.
+          You can only send messages while you and @{info.other.username} are in each other&apos;s circles. Your earlier messages stay here.
         </p>
       ) : (
         <form onSubmit={send} className="mt-3 flex flex-col gap-2">

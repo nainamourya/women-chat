@@ -48,14 +48,14 @@ export function InboxClient() {
   return (
     <SocialPage title="Messages">
       <p className="text-xs text-muted">
-        {connected ? "Live" : "Connecting…"} · You can message members who follow you and whom you follow back. Messages aren&apos;t end-to-end encrypted.
+        {connected ? "Live" : "Connecting…"} · You can message women who are in each other&apos;s circles. Messages aren&apos;t end-to-end encrypted.
       </p>
       {list.status === "loading" && <LoadingRows label="Loading conversations" />}
       {list.status === "error" && list.error && <GateNotice error={list.error} onResolved={list.reload} onRetry={list.reload} />}
       {list.status === "ready" && list.items.length === 0 && (
         <EmptyState
           title="No conversations yet"
-          body="Follow someone and have them follow you back, then message them from their profile."
+          body="Add someone to your circle. Once she adds you back, message her from her profile."
           action={{ href: "/discover", label: "Find people" }}
         />
       )}
@@ -73,7 +73,7 @@ export function InboxClient() {
                   <span className="shrink-0 text-xs text-muted">{conversation.lastMessage ? timeAgo(conversation.lastMessage.createdAt) : ""}</span>
                 </span>
                 <span className={`block truncate text-sm ${conversation.unreadCount > 0 ? "text-foreground" : "text-muted"}`}>{preview(conversation)}</span>
-                {!conversation.canSend && <span className="block text-xs text-muted">Follow each other again to send messages</span>}
+                {!conversation.canSend && <span className="block text-xs text-muted">Add each other again to send messages</span>}
               </span>
               {conversation.unreadCount > 0 && (
                 <span aria-label={`${conversation.unreadCount} unread`} className="inline-flex min-w-5 items-center justify-center rounded-full bg-accent px-1.5 text-xs font-semibold text-accent-foreground">

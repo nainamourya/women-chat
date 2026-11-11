@@ -15,7 +15,7 @@ export function FollowListClient({ username, kind }: { username: string; kind: "
 
   return (
     <SocialPage
-      title={kind === "followers" ? "Followers" : "Following"}
+      title={kind === "followers" ? "Added by" : "Circle"}
       actions={
         <Link href={`/u/${encodeURIComponent(username)}`} className="text-sm text-muted hover:text-foreground">
           @{username}
@@ -30,7 +30,7 @@ export function FollowListClient({ username, kind }: { username: string; kind: "
           <GateNotice error={list.error} onResolved={list.reload} onRetry={list.reload} />
         ))}
       {list.status === "ready" && list.items.length === 0 && (
-        <EmptyState title={kind === "followers" ? "No followers yet" : "Not following anyone yet"} />
+        <EmptyState title={kind === "followers" ? "No one has added her yet" : "No one in this circle yet"} />
       )}
       <ul className="flex flex-col gap-2">
         {list.items.map((user) => (

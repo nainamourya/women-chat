@@ -79,7 +79,7 @@ export function ProfileClient({ username }: { username: string }) {
 
   async function block() {
     setMenuOpen(false);
-    if (!window.confirm(`Block @${username}? You won't see each other's profiles or posts, and any follows between you will be removed.`)) return;
+    if (!window.confirm(`Block @${username}? You won't see each other's profiles or posts, and you'll both be removed from each other's circles.`)) return;
     setActionError(null);
     try {
       await social(`/users/${encodeURIComponent(username)}/block`, { method: "POST" });
@@ -120,8 +120,10 @@ export function ProfileClient({ username }: { username: string }) {
           <MemberAvatar user={profile} size="xl" />
           <div className="flex flex-1 justify-around">
             <Stat value={profile.postCount} label={profile.postCount === 1 ? "post" : "posts"} />
-            <Stat value={profile.followerCount} label={profile.followerCount === 1 ? "follower" : "followers"} href={`${base}/followers`} />
-            <Stat value={profile.followingCount} label="following" href={`${base}/following`} />
+            {/* "Circle" = the women she added (her choice) comes first; how many
+                circles she is in is secondary, so the profile is not a popularity score. */}
+            <Stat value={profile.followingCount} label="circle" href={`${base}/following`} />
+            <Stat value={profile.followerCount} label={profile.followerCount === 1 ? "in a circle" : "in circles"} href={`${base}/followers`} />
           </div>
         </div>
 
@@ -129,7 +131,7 @@ export function ProfileClient({ username }: { username: string }) {
           <h1 className="text-base font-semibold text-foreground">{profile.displayName}</h1>
           <p className="text-sm text-muted">@{profile.username}</p>
           {profile.bio && <p className="mt-1 whitespace-pre-wrap break-words text-sm text-foreground">{profile.bio}</p>}
-          {!profile.isSelf && profile.followsYou && <p className="mt-1 text-xs text-muted">Follows you</p>}
+          {!profile.isSelf && profile.followsYou && <p className="mt-1 text-xs text-muted">Added you to her circle</p>}
         </div>
 
         <div className="flex flex-wrap items-start gap-2">
@@ -159,7 +161,7 @@ export function ProfileClient({ username }: { username: string }) {
                   Message
                 </Button>
               ) : (
-                <span className="self-center text-xs text-muted">You can message each other once you both follow each other.</span>
+                <span className="self-center text-xs text-muted">You can message each other once you&apos;ve both added each other.</span>
               )}
               <div className="relative ml-auto">
                 <button type="button" aria-label="More options" aria-expanded={menuOpen} onClick={() => setMenuOpen((o) => !o)} className="rounded-md p-1.5 text-muted hover:text-foreground">

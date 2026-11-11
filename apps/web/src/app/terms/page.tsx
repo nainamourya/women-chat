@@ -117,8 +117,8 @@ export default function TermsPage() {
             see them. Anyone who can see a photo can still save it or take a screenshot.
           </li>
           <li>
-            <strong>Following.</strong> Following a member does not need their approval, and there are no
-            private accounts at the moment.
+            <strong>Circles (following).</strong> In the app, following a member is called adding her to
+            your circle. It does not need her approval, and there are no private accounts at the moment.
           </li>
           <li>
             <strong>Photos.</strong> You may upload JPEG, PNG or WebP photos. Location and camera details

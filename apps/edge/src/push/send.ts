@@ -29,7 +29,7 @@ const CONTENT: Record<PushKind, { title: string; body: string; url: string }> = 
   message: { title: "GiiGirl", body: "You have a new message", url: "/messages" },
   comment: { title: "GiiGirl", body: "Someone commented on your post", url: "/notifications" },
   like: { title: "GiiGirl", body: "Someone liked your post", url: "/notifications" },
-  follow: { title: "GiiGirl", body: "You have a new follower", url: "/notifications" },
+  follow: { title: "GiiGirl", body: "Someone added you to her circle", url: "/notifications" },
 };
 
 // At most one push per kind per member in this window; the in-app badge still
