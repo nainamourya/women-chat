@@ -9,7 +9,15 @@ import Link from "next/link";
 // wrapped in <Confirm> so it renders highlighted and can't be missed. Before
 // launch: resolve every <Confirm>, then flip LEGAL_DRAFT to false to remove
 // the draft banner.
+//
+// The banner and the <Confirm> notes are shown only in development (npm run
+// dev), never on the live site: they are notes for the team, and showing
+// "not decided yet" on public safety pages undermines members' trust.
 export const LEGAL_DRAFT = true;
+const SHOW_TEAM_NOTES = LEGAL_DRAFT && process.env.NODE_ENV !== "production";
+
+// Shown as "Last updated" on the live site. Change it whenever the text changes.
+const LAST_UPDATED = "November 2026";
 
 const LEGAL_LINKS = [
   { href: "/terms", label: "Terms of Service" },
@@ -30,7 +38,7 @@ export function LegalPage({
 }) {
   return (
     <main className="mx-auto w-full max-w-2xl flex-1 px-6 py-12 sm:px-8 md:py-16">
-      {LEGAL_DRAFT && (
+      {SHOW_TEAM_NOTES && (
         <div
           role="note"
           className="mb-8 rounded-lg border border-warning/30 bg-warning-bg px-4 py-3 text-sm text-warning"
@@ -57,7 +65,7 @@ export function LegalPage({
       <h1 className="font-display text-3xl font-bold text-foreground">{title}</h1>
       <p className="mt-3 text-base leading-relaxed text-muted">{intro}</p>
       <p className="mt-2 text-xs text-muted">
-        Last updated: <Confirm>date of publication</Confirm>
+        Last updated: {LAST_UPDATED}
       </p>
 
       <div className="mt-10 flex flex-col gap-9">{children}</div>
@@ -67,7 +75,7 @@ export function LegalPage({
 
 export function LegalSection({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="flex flex-col gap-3 text-sm leading-relaxed text-foreground">
+    <section className="flex flex-col gap-3 text-sm leading-relaxed text-foreground [&>p:empty]:hidden">
       <h2 className="font-display text-xl font-bold">{title}</h2>
       {children}
     </section>
@@ -78,8 +86,10 @@ export function LegalList({ children }: { children: ReactNode }) {
   return <ul className="list-disc space-y-1.5 pl-5">{children}</ul>;
 }
 
-// Marks a legal/business detail the team must confirm. Visible on purpose.
+// Marks a legal/business detail the team must confirm. Highlighted in
+// development; renders nothing on the live site (see SHOW_TEAM_NOTES).
 export function Confirm({ children }: { children: ReactNode }) {
+  if (!SHOW_TEAM_NOTES) return null;
   return (
     <mark className="rounded bg-warning-bg px-1 font-medium text-warning">[To confirm: {children}]</mark>
   );

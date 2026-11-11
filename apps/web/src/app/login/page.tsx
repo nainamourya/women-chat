@@ -36,7 +36,7 @@ export default function LoginPage() {
         return;
       }
 
-      router.push("/eligibility");
+      router.push("/eligibility?from=login");
     } finally {
       setSubmitting(false);
     }
@@ -58,7 +58,7 @@ export default function LoginPage() {
         <Button
           type="button"
           variant="secondary"
-          onClick={() => signIn("google", { callbackUrl: "/eligibility" })}
+          onClick={() => signIn("google", { callbackUrl: "/eligibility?from=login" })}
           className="w-full"
         >
           <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">

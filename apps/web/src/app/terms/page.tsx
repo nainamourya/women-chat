@@ -15,6 +15,10 @@ export default function TermsPage() {
     >
       <LegalSection title="Accepting these terms">
         <p>
+          By creating a GiiGirl account, you agree to these Terms, our Privacy Policy and our Community
+          Guidelines. If you don&apos;t agree, please don&apos;t use GiiGirl.
+        </p>
+        <p>
           <Confirm>
             how members accept the Terms of Service and Privacy Policy when they create an account. This is
             not implemented yet. Proposed: an unchecked checkbox at sign-up (&ldquo;I agree to the Terms of

@@ -20,7 +20,7 @@ async function fetchLatestSubmission(userId: string): Promise<Submission> {
   return data.submission ?? null;
 }
 
-export default async function EligibilityPage() {
+export default async function EligibilityPage({ searchParams }: { searchParams: Promise<{ from?: string }> }) {
   const session = await auth();
   if (!session?.user) {
     redirect("/login");
@@ -30,6 +30,14 @@ export default async function EligibilityPage() {
   }
 
   const submission = await fetchLatestSubmission(session.user.id);
+
+  // Straight after logging in, a member who is already verified has nothing to
+  // do here: take her home. (Opened from a link, the page still shows her status.)
+  const { from } = await searchParams;
+  const verified = submission ? submission.status === "approved" : session.user.verificationStatus === "verified";
+  if (from === "login" && verified) {
+    redirect("/feed");
+  }
 
   return (
     <main className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center px-6 py-16">
