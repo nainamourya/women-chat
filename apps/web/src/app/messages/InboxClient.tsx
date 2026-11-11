@@ -12,7 +12,7 @@ import { usePagedList } from "@/lib/social/usePagedList";
 function preview(conversation: ConversationView): string {
   const last = conversation.lastMessage;
   if (!last) return "No messages yet";
-  const body = last.isPostShare && !last.content ? "Shared a post" : last.content;
+  const body = last.isPostShare && !last.content ? "Shared a Gii" : last.content;
   return `${last.fromMe ? "You: " : ""}${body}`;
 }
 
@@ -46,17 +46,17 @@ export function InboxClient() {
   });
 
   return (
-    <SocialPage title="Messages">
+    <SocialPage title="Chats">
       <p className="text-xs text-muted">
-        {connected ? "Live" : "Connecting…"} · You can message women who are in each other&apos;s circles. Messages aren&apos;t end-to-end encrypted.
+        {connected ? "Live" : "Connecting…"} · You can chat with women who are in each other&apos;s circles. Chats aren&apos;t end-to-end encrypted.
       </p>
       {list.status === "loading" && <LoadingRows label="Loading conversations" />}
       {list.status === "error" && list.error && <GateNotice error={list.error} onResolved={list.reload} onRetry={list.reload} />}
       {list.status === "ready" && list.items.length === 0 && (
         <EmptyState
           title="No conversations yet"
-          body="Add someone to your circle. Once she adds you back, message her from her profile."
-          action={{ href: "/discover", label: "Find people" }}
+          body="Add someone to your circle. Once she adds you back, start a chat from her profile."
+          action={{ href: "/discover", label: "Search for women" }}
         />
       )}
       <ul className="flex flex-col gap-2">

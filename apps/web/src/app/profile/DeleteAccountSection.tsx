@@ -57,7 +57,7 @@ export function DeleteAccountSection() {
         Delete account
       </h3>
       <p className="text-sm text-muted">
-        Permanently delete your GiiGirl account. Your profile, photos, posts, comments, likes, circles and verification details are removed. Messages you sent stay in other
+        Permanently delete your GiiGirl account. Your profile, photos, Giis, replies, loves, circles and verification details are removed. Messages you sent stay in other
         people&apos;s conversations, with their text replaced. This can&apos;t be undone.
       </p>
       <div>

@@ -65,10 +65,10 @@ export function NewPostClient() {
     }
   }
 
-  if (gate) return <SocialPage title="New post"><GateNotice error={gate} onResolved={() => setGate(null)} /></SocialPage>;
+  if (gate) return <SocialPage title="Share a Gii"><GateNotice error={gate} onResolved={() => setGate(null)} /></SocialPage>;
 
   return (
-    <SocialPage title="New post">
+    <SocialPage title="Share a Gii">
       <Card>
         <form onSubmit={submit} className="flex flex-col gap-4">
           <input ref={fileInput} type="file" accept="image/jpeg,image/png,image/webp" onChange={choose} className="sr-only" aria-label="Choose a photo" />
@@ -116,7 +116,7 @@ export function NewPostClient() {
 
           {error && <Alert variant="danger">{error}</Alert>}
           <Button type="submit" loading={busy} disabled={!image || preparing}>
-            {busy ? "Posting…" : "Share post"}
+            {busy ? "Sharing…" : "Share Gii"}
           </Button>
         </form>
       </Card>

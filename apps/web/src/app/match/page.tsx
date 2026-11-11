@@ -38,10 +38,10 @@ export default async function MatchPage() {
   return (
     <main className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center px-6 py-16">
       <Mascot mood="wave" size="sm" className="mb-3 self-start" />
-      <h1 className="mb-1 text-2xl font-semibold text-foreground">Find someone to chat with</h1>
+      <h1 className="mb-1 text-2xl font-semibold text-foreground">Talk to someone new</h1>
       <p className="mb-6 text-sm text-muted">
-        You&apos;ll be randomly paired with another eligible user for a
-        private text chat.
+        One-to-one video with a verified woman who&apos;s here right now. You can
+        leave or block anytime.
       </p>
 
       <Card className="mb-6 flex flex-col gap-2 p-4 text-sm">

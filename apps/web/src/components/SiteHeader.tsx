@@ -34,20 +34,20 @@ export function SiteHeader() {
                 Home
               </Link>
               <Link href="/discover" className="hover:text-brand">
-                Discover
+                Search
               </Link>
               <Link href="/messages" className="relative hover:text-brand">
-                Messages
-                <Badge count={counts.messages} label="messages" />
+                Chats
+                <Badge count={counts.messages} label="chat messages" />
               </Link>
               <Link href="/match" className="hover:text-brand">
-                Find someone
+                Talk
               </Link>
               <Link href="/eligibility" className="hover:text-brand">
                 Eligibility
               </Link>
             </nav>
-            <Link href="/post/new" aria-label="New post" title="New post" className="text-foreground hover:text-brand">
+            <Link href="/post/new" aria-label="Share a Gii" title="Share a Gii" className="text-foreground hover:text-brand">
               <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
                 <rect x="3.5" y="3.5" width="17" height="17" rx="5" />
                 <path strokeLinecap="round" d="M12 8v8M8 12h8" />

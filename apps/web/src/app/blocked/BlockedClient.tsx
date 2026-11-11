@@ -50,7 +50,7 @@ export function BlockedClient() {
 
   return (
     <SocialPage title="Blocked accounts">
-      <p className="text-sm text-muted">Blocked members can&apos;t see your profile or posts, add you or message you, and you can&apos;t see theirs.</p>
+      <p className="text-sm text-muted">Blocked members can&apos;t see your profile or Giis, add you or message you, and you can&apos;t see theirs.</p>
       {error && <GateNotice error={error} onResolved={retry} onRetry={retry} />}
       {!error && users === null && <LoadingRows count={2} label="Loading" />}
       {users && users.length === 0 && <EmptyState title="You haven't blocked anyone" />}

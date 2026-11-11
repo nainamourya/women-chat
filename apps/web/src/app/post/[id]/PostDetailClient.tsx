@@ -42,7 +42,7 @@ export function PostDetailClient({ postId }: { postId: string }) {
     if (postError.status === 404) {
       return (
         <SocialPage>
-          <EmptyState title="This post isn't available" body="It may have been deleted, or you might not have access to it." action={{ href: "/feed", label: "Back to home" }} />
+          <EmptyState title="This Gii isn't available" body="It may have been deleted, or you might not have access to it." action={{ href: "/feed", label: "Back to home" }} />
         </SocialPage>
       );
     }
@@ -55,7 +55,7 @@ export function PostDetailClient({ postId }: { postId: string }) {
   if (!post) {
     return (
       <SocialPage>
-        <LoadingRows count={1} label="Loading post" />
+        <LoadingRows count={1} label="Loading Gii" />
       </SocialPage>
     );
   }
@@ -106,12 +106,12 @@ function Comments({ post, onCountChange }: { post: PostView; onCountChange: (del
   }
 
   return (
-    <section id="comments" aria-label="Comments" className="flex flex-col gap-3">
-      <h2 className="text-sm font-semibold text-foreground">Comments</h2>
+    <section id="comments" aria-label="Replies" className="flex flex-col gap-3">
+      <h2 className="text-sm font-semibold text-foreground">Replies</h2>
 
       <form onSubmit={submit} className="flex flex-col gap-2">
         <label className="sr-only" htmlFor="new-comment">
-          Add a comment
+          Write a reply
         </label>
         <textarea
           id="new-comment"
@@ -119,7 +119,7 @@ function Comments({ post, onCountChange }: { post: PostView; onCountChange: (del
           onChange={(e) => setText(e.target.value)}
           maxLength={MAX_COMMENT}
           rows={2}
-          placeholder="Add a comment…"
+          placeholder="Write a reply… (be kind 💜)"
           className="rounded-md border border-border bg-surface px-3 py-2.5 text-sm text-foreground placeholder:text-muted focus-visible:outline-none focus:border-brand focus:ring-2 focus:ring-brand/15"
         />
         <div className="flex items-center justify-between">
@@ -127,15 +127,15 @@ function Comments({ post, onCountChange }: { post: PostView; onCountChange: (del
             {text.length}/{MAX_COMMENT}
           </span>
           <Button type="submit" size="sm" loading={posting} disabled={!text.trim()}>
-            Post
+            Reply
           </Button>
         </div>
       </form>
       {error && <Alert variant="danger">{error}</Alert>}
 
-      {list.status === "loading" && <LoadingRows count={2} label="Loading comments" />}
+      {list.status === "loading" && <LoadingRows count={2} label="Loading replies" />}
       {list.status === "error" && list.error && <Alert variant="danger">{list.error.message}</Alert>}
-      {list.status === "ready" && list.items.length === 0 && <p className="text-sm text-muted">No comments yet. Start the conversation.</p>}
+      {list.status === "ready" && list.items.length === 0 && <p className="text-sm text-muted">No replies yet. Start the conversation.</p>}
       <ul className="flex flex-col gap-3">
         {list.items.map((comment) => (
           <li key={comment.id} className="flex items-start gap-3">

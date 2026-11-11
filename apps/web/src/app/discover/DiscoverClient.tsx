@@ -48,7 +48,7 @@ export function DiscoverClient() {
   };
 
   return (
-    <SocialPage title="Discover">
+    <SocialPage title="Search">
       <Input
         label="Search members"
         type="search"

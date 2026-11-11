@@ -110,7 +110,7 @@ export function ConversationClient({ conversationId }: { conversationId: string 
     if (error.status === 404) {
       return (
         <SocialPage>
-          <EmptyState title="Conversation not found" body="It doesn't exist, or you don't have access to it." action={{ href: "/messages", label: "Back to messages" }} />
+          <EmptyState title="Conversation not found" body="It doesn't exist, or you don't have access to it." action={{ href: "/messages", label: "Back to chats" }} />
         </SocialPage>
       );
     }
@@ -131,7 +131,7 @@ export function ConversationClient({ conversationId }: { conversationId: string 
   return (
     <main className="mx-auto flex h-[calc(100dvh-9.5rem)] w-full max-w-xl flex-col px-4 py-4 sm:h-[calc(100dvh-4.5rem)]">
       <header className="mb-3 flex items-center gap-3 border-b border-border pb-3">
-        <Link href="/messages" aria-label="Back to messages" className="text-muted hover:text-foreground">
+        <Link href="/messages" aria-label="Back to chats" className="text-muted hover:text-foreground">
           ←
         </Link>
         <Link href={`/u/${encodeURIComponent(info.other.username)}`} className="flex min-w-0 flex-1 items-center gap-3">
@@ -162,7 +162,7 @@ export function ConversationClient({ conversationId }: { conversationId: string 
                   </span>
                 </Link>
               )}
-              {message.sharedPostUnavailable && <p className="mb-1 text-xs italic opacity-80">Shared post unavailable</p>}
+              {message.sharedPostUnavailable && <p className="mb-1 text-xs italic opacity-80">Shared Gii unavailable</p>}
               {message.content && <p className="whitespace-pre-wrap break-words">{message.content}</p>}
               <p className={`mt-0.5 text-[11px] ${message.fromMe ? "text-brand-foreground/70" : "text-muted"}`}>{timeAgo(message.createdAt)}</p>
             </div>

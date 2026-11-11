@@ -50,7 +50,7 @@ export function ShareDialog({ open, onClose, postId }: { open: boolean; onClose:
 
   async function nativeShare() {
     try {
-      await navigator.share({ title: "A post on GiiGirl", url: link });
+      await navigator.share({ title: "A Gii on GiiGirl", url: link });
     } catch (err) {
       // Closing the share sheet is not a failure.
       if (!(err instanceof DOMException && err.name === "AbortError")) {
@@ -73,13 +73,13 @@ export function ShareDialog({ open, onClose, postId }: { open: boolean; onClose:
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Share post">
+    <Modal open={open} onClose={onClose} title="Share this Gii">
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-2">
           <input
             readOnly
             value={link}
-            aria-label="Post link"
+            aria-label="Gii link"
             onFocus={(e) => e.currentTarget.select()}
             className="w-full rounded-md border border-border bg-background px-3 py-2 text-xs text-muted"
           />
@@ -97,11 +97,11 @@ export function ShareDialog({ open, onClose, postId }: { open: boolean; onClose:
         </div>
 
         <div className="flex flex-col gap-2">
-          <h3 className="text-sm font-semibold text-foreground">Send in a message</h3>
+          <h3 className="text-sm font-semibold text-foreground">Send in a chat</h3>
           {loadError && <Alert variant="danger">{loadError}</Alert>}
           {!loadError && people === null && <p className="text-sm text-muted">Loading…</p>}
           {people !== null && people.length === 0 && (
-            <p className="text-sm text-muted">You can message women you&apos;ve added to your circle who have added you back. None yet.</p>
+            <p className="text-sm text-muted">You can chat with women you&apos;ve added to your circle who have added you back. None yet.</p>
           )}
           <ul className="flex max-h-56 flex-col gap-2 overflow-y-auto">
             {people?.map((c) => (

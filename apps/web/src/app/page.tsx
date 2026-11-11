@@ -126,7 +126,7 @@ const trustPoints = [
   {
     icon: LockIcon,
     title: "Members only, not the whole internet",
-    body: "Your profile, posts and messages are visible only to verified members — never to search engines or strangers. Your verification video is deleted as soon as it's reviewed.",
+    body: "Your profile, Giis and messages are visible only to verified members — never to search engines or strangers. Your verification video is deleted as soon as it's reviewed.",
   },
   {
     icon: ChatHeartIcon,
@@ -146,11 +146,11 @@ const steps = [
   },
   {
     title: "Make it yours",
-    body: "Pick a username, add a photo, build your circle and share your first post.",
+    body: "Pick a username, add a photo, build your circle and share your first Gii — a photo moment.",
   },
   {
     title: "Talk your way",
-    body: "Message privately, or tap Find someone for a one-to-one video chat with another verified woman.",
+    body: "Chat privately with your circle, or tap Talk for a one-to-one video chat with another verified woman.",
   },
 ];
 
@@ -170,7 +170,7 @@ export default function Home() {
       href={authed ? "/feed" : "/signup"}
       className="rounded-full bg-accent px-6 py-3 text-center text-sm font-semibold text-accent-foreground shadow-md transition-transform hover:-translate-y-0.5 hover:bg-accent-hover"
     >
-      {authed ? "Go to your feed" : "Join GiiGirl — it's free"}
+      {authed ? "Go to your circle" : "Join GiiGirl — it's free"}
     </Link>
   );
 
@@ -192,7 +192,7 @@ export default function Home() {
                 <br className="hidden sm:block" /> A little less alone.
               </h1>
               <p className="max-w-md text-base leading-relaxed text-muted">
-                A social space only for women. Share posts, make friends, message privately — or
+                A social space only for women. Share Giis, make friends, message privately — or
                 video chat one-to-one with another verified woman. Not a dating app.
               </p>
 
@@ -343,11 +343,11 @@ export default function Home() {
                 </div>
                 <div className="h-24 rounded-xl bg-surface-hover" aria-hidden="true" />
                 <p className="text-sm text-foreground">First pottery class today — so proud of this wonky little bowl 🏺</p>
-                <span className="text-xs text-muted">♥ 24 · 6 comments</span>
+                <span className="text-xs text-muted">♥ 24 loves · 6 replies</span>
               </div>
 
               <div className="flex flex-col gap-2.5 rounded-2xl border border-border bg-background p-5">
-                <span className="text-xs font-semibold text-muted">Messages</span>
+                <span className="text-xs font-semibold text-muted">Chats</span>
                 <div className="flex justify-start">
                   <div className="max-w-[85%] rounded-2xl bg-surface-hover px-3.5 py-2 text-sm text-foreground">
                     Loved your bowl! Which studio is it? 😊
@@ -361,10 +361,10 @@ export default function Home() {
               </div>
 
               <div className="flex flex-col gap-3 rounded-2xl border border-border bg-background p-5">
-                <span className="text-xs font-semibold text-muted">Find someone</span>
+                <span className="text-xs font-semibold text-muted">Talk</span>
                 <div className="flex flex-1 flex-col items-center justify-center gap-2 rounded-xl bg-surface-hover p-4 text-center">
                   <span className="text-2xl" aria-hidden="true">📹</span>
-                  <span className="text-sm font-semibold text-foreground">You&apos;re matched!</span>
+                  <span className="text-sm font-semibold text-foreground">You&apos;re connected!</span>
                   <span className="text-xs text-muted">One-to-one video chat with a verified woman</span>
                 </div>
                 <span className="text-xs text-muted">Leave anytime · Block or report in one tap</span>

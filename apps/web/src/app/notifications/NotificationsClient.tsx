@@ -16,9 +16,9 @@ function describe(n: NotificationItem): string {
     case "follow":
       return "added you to her circle.";
     case "like":
-      return "liked your post.";
+      return "loved your Gii.";
     case "comment":
-      return n.commentPreview ? `commented: “${n.commentPreview}”` : "commented on your post.";
+      return n.commentPreview ? `replied: “${n.commentPreview}”` : "replied to your Gii.";
     case "message":
       return "sent you a message.";
   }
@@ -53,7 +53,7 @@ export function NotificationsClient() {
       {list.status === "loading" && <LoadingRows label="Loading notifications" />}
       {list.status === "error" && list.error && <GateNotice error={list.error} onResolved={list.reload} onRetry={list.reload} />}
       {list.status === "ready" && list.items.length === 0 && (
-        <EmptyState title="Nothing new yet" body="You'll see who added you to her circle, likes, comments and messages here." />
+        <EmptyState title="Nothing new yet" body="You'll see who added you to her circle, loves, replies and messages here." />
       )}
       <ul className="flex flex-col gap-2">
         {list.items.map((n) => (

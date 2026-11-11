@@ -225,7 +225,7 @@ export function MatchClient() {
         const probe = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
         probe.getTracks().forEach((track) => track.stop());
       } catch {
-        setError("Camera and microphone access is needed to meet someone. Allow it in your browser's site settings and try again.");
+        setError("Camera and microphone access is needed to talk. Allow it in your browser's site settings and try again.");
         return;
       }
       await connectSocket();
@@ -319,11 +319,11 @@ export function MatchClient() {
           <div className="flex flex-col gap-1">
             <h2 className="text-base font-semibold text-foreground">Ready when you are</h2>
             <p className="text-sm text-muted">
-              We&apos;ll pair you with another verified member who&apos;s here right now and start a video call straight away.
+              We&apos;ll connect you with another verified woman who&apos;s here right now and start a video call straight away.
             </p>
           </div>
           <Button type="button" onClick={handleFindSomeone} disabled={loading} className="w-full">
-            {loading ? "Starting…" : "Find Someone"}
+            {loading ? "Starting…" : "Start talking"}
           </Button>
         </Card>
       )}
@@ -333,7 +333,7 @@ export function MatchClient() {
           <Mascot mood="search" size="lg" caption="Looking…" />
           <div className="flex flex-col gap-1">
             <p className="text-sm font-medium text-foreground">Finding someone for you… 💜</p>
-            <p className="text-xs text-muted">Hang tight — we&apos;re looking for a great match.</p>
+            <p className="text-xs text-muted">Hang tight — we&apos;re finding a verified woman for you.</p>
           </div>
           <Button type="button" variant="outline" onClick={handleCancel} disabled={loading}>
             Cancel

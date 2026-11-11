@@ -101,16 +101,16 @@ export function BottomNav() {
     <nav aria-label="Main" className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-surface/95 backdrop-blur-md sm:hidden">
       <div className="mx-auto flex max-w-3xl items-end justify-around px-2 pb-2 pt-1.5">
         <NavItem href="/feed" label="Home" icon={HomeIcon} active={on("/feed")} />
-        <NavItem href="/discover" label="Discover" icon={SearchIcon} active={on("/discover")} />
+        <NavItem href="/discover" label="Search" icon={SearchIcon} active={on("/discover")} />
 
         <Link href="/match" className="-mt-5 flex flex-col items-center gap-1">
           <span className="flex h-12 w-12 items-center justify-center rounded-full text-white shadow-md" style={{ backgroundImage: "var(--brand-gradient)" }}>
             <FindSomeoneIcon className="h-6 w-6" />
           </span>
-          <span className={`text-[11px] ${on("/match") ? "text-brand" : "text-muted"}`}>Find someone</span>
+          <span className={`text-[11px] ${on("/match") ? "text-brand" : "text-muted"}`}>Talk</span>
         </Link>
 
-        <NavItem href="/messages" label="Messages" icon={ChatIcon} active={on("/messages")} badge={counts.messages} />
+        <NavItem href="/messages" label="Chats" icon={ChatIcon} active={on("/messages")} badge={counts.messages} />
         <NavItem href="/me" label="Profile" icon={ProfileIcon} active={on("/me") || on("/u")} />
       </div>
     </nav>

@@ -125,7 +125,7 @@ export function PostCard({
       </header>
 
       {linkToDetail ? (
-        <Link href={detailHref} aria-label="Open post">
+        <Link href={detailHref} aria-label="Open Gii">
           <img src={post.imageUrl} alt={post.caption ? `Photo: ${post.caption.slice(0, 100)}` : `Photo by ${post.author.username}`} loading="lazy" className="aspect-square w-full bg-background object-cover" />
         </Link>
       ) : (
@@ -139,12 +139,13 @@ export function PostCard({
             onClick={toggleLike}
             disabled={liking}
             aria-pressed={post.likedByViewer}
-            aria-label={post.likedByViewer ? "Unlike" : "Like"}
+            aria-label={post.likedByViewer ? "Remove love" : "Love"}
             className={`${iconButton} ${post.likedByViewer ? "text-accent hover:text-accent" : ""}`}
           >
             <HeartIcon filled={post.likedByViewer} />
+            <span className="text-sm font-medium" aria-hidden="true">{post.likedByViewer ? "Loved" : "Love"}</span>
           </button>
-          <Link href={`${detailHref}#comments`} className={iconButton} aria-label="Comments">
+          <Link href={`${detailHref}#comments`} className={iconButton} aria-label="Replies">
             <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
               <path strokeLinejoin="round" d="M4 11c0-4 3.6-7 8-7s8 3 8 7-3.6 7-8 7c-1 0-2-.15-2.9-.45L5 19.5l1.2-3.6C4.8 14.6 4 12.9 4 11z" />
             </svg>
@@ -157,7 +158,7 @@ export function PostCard({
         </div>
 
         <p className="text-sm font-semibold text-foreground" aria-live="polite">
-          {post.likeCount === 1 ? "1 like" : `${post.likeCount} likes`}
+          {post.likeCount === 1 ? "1 love" : `${post.likeCount} loves`}
         </p>
         {post.caption && (
           <p className="whitespace-pre-wrap break-words text-sm text-foreground">
@@ -169,13 +170,13 @@ export function PostCard({
         )}
         {linkToDetail && post.commentCount > 0 && (
           <Link href={`${detailHref}#comments`} className="text-sm text-muted hover:text-foreground">
-            View {post.commentCount === 1 ? "1 comment" : `all ${post.commentCount} comments`}
+            View {post.commentCount === 1 ? "1 reply" : `all ${post.commentCount} replies`}
           </Link>
         )}
         {error && <Alert variant="danger">{error}</Alert>}
         {confirmDelete && (
           <div role="alertdialog" aria-label="Confirm delete" className="flex items-center justify-between gap-2 rounded-md bg-danger-bg px-3 py-2 text-sm text-danger">
-            <span>Delete this post?</span>
+            <span>Delete this Gii?</span>
             <span className="flex gap-2">
               <button type="button" className="font-medium" onClick={() => setConfirmDelete(false)} disabled={deleting}>
                 Cancel
@@ -189,7 +190,7 @@ export function PostCard({
       </div>
 
       <ShareDialog open={shareOpen} onClose={() => setShareOpen(false)} postId={post.id} />
-      <ReportDialog open={reportOpen} onClose={() => setReportOpen(false)} path={`/posts/${post.id}/report`} title="Report this post" />
+      <ReportDialog open={reportOpen} onClose={() => setReportOpen(false)} path={`/posts/${post.id}/report`} title="Report this Gii" />
     </article>
   );
 }

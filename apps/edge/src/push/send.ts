@@ -27,8 +27,8 @@ export function vapidKeys(env: PushEnv): VapidKeys | null {
 // members that would not be safe. The app shows the details once opened.
 const CONTENT: Record<PushKind, { title: string; body: string; url: string }> = {
   message: { title: "GiiGirl", body: "You have a new message", url: "/messages" },
-  comment: { title: "GiiGirl", body: "Someone commented on your post", url: "/notifications" },
-  like: { title: "GiiGirl", body: "Someone liked your post", url: "/notifications" },
+  comment: { title: "GiiGirl", body: "Someone replied to your Gii", url: "/notifications" },
+  like: { title: "GiiGirl", body: "Someone loved your Gii", url: "/notifications" },
   follow: { title: "GiiGirl", body: "Someone added you to her circle", url: "/notifications" },
 };
 

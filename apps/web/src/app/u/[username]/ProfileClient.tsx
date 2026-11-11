@@ -79,7 +79,7 @@ export function ProfileClient({ username }: { username: string }) {
 
   async function block() {
     setMenuOpen(false);
-    if (!window.confirm(`Block @${username}? You won't see each other's profiles or posts, and you'll both be removed from each other's circles.`)) return;
+    if (!window.confirm(`Block @${username}? You won't see each other's profiles or Giis, and you'll both be removed from each other's circles.`)) return;
     setActionError(null);
     try {
       await social(`/users/${encodeURIComponent(username)}/block`, { method: "POST" });
@@ -93,7 +93,7 @@ export function ProfileClient({ username }: { username: string }) {
     if (error.status === 404) {
       return (
         <SocialPage>
-          <EmptyState title="Member not found" body="This profile doesn't exist or isn't available to you." action={{ href: "/discover", label: "Find people" }} />
+          <EmptyState title="Member not found" body="This profile doesn't exist or isn't available to you." action={{ href: "/discover", label: "Search for women" }} />
         </SocialPage>
       );
     }
@@ -119,7 +119,7 @@ export function ProfileClient({ username }: { username: string }) {
         <div className="flex items-center gap-5">
           <MemberAvatar user={profile} size="xl" />
           <div className="flex flex-1 justify-around">
-            <Stat value={profile.postCount} label={profile.postCount === 1 ? "post" : "posts"} />
+            <Stat value={profile.postCount} label={profile.postCount === 1 ? "Gii" : "Giis"} />
             {/* "Circle" = the women she added (her choice) comes first; how many
                 circles she is in is secondary, so the profile is not a popularity score. */}
             <Stat value={profile.followingCount} label="circle" href={`${base}/following`} />
@@ -141,7 +141,7 @@ export function ProfileClient({ username }: { username: string }) {
                 Edit profile
               </Button>
               <Link href="/post/new" className="rounded-md bg-brand px-3 py-1.5 text-xs font-medium text-brand-foreground shadow-md hover:bg-brand-hover">
-                New post
+                Share a Gii
               </Link>
               <Link href="/blocked" className="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-surface-hover">
                 Blocked accounts
@@ -158,10 +158,10 @@ export function ProfileClient({ username }: { username: string }) {
               />
               {profile.isMutual ? (
                 <Button type="button" variant="outline" size="sm" loading={messaging} onClick={startMessage}>
-                  Message
+                  Chat
                 </Button>
               ) : (
-                <span className="self-center text-xs text-muted">You can message each other once you&apos;ve both added each other.</span>
+                <span className="self-center text-xs text-muted">You can chat once you&apos;ve both added each other.</span>
               )}
               <div className="relative ml-auto">
                 <button type="button" aria-label="More options" aria-expanded={menuOpen} onClick={() => setMenuOpen((o) => !o)} className="rounded-md p-1.5 text-muted hover:text-foreground">
@@ -188,20 +188,20 @@ export function ProfileClient({ username }: { username: string }) {
         {actionError && <Alert variant="danger">{actionError}</Alert>}
       </section>
 
-      <section aria-label="Posts">
-        {posts.status === "loading" && <LoadingRows count={2} label="Loading posts" />}
+      <section aria-label="Giis">
+        {posts.status === "loading" && <LoadingRows count={2} label="Loading Giis" />}
         {posts.status === "error" && posts.error && <Alert variant="danger">{posts.error.message}</Alert>}
         {posts.status === "ready" && posts.items.length === 0 && (
           <EmptyState
-            title={profile.isSelf ? "Share your first photo" : "No posts yet"}
+            title={profile.isSelf ? "Share your first Gii" : "No Giis yet"}
             body={profile.isSelf ? "Your photos will show up here." : `@${profile.username} hasn't posted anything yet.`}
-            action={profile.isSelf ? { href: "/post/new", label: "Create a post" } : undefined}
+            action={profile.isSelf ? { href: "/post/new", label: "Share a Gii" } : undefined}
           />
         )}
         <ul className="grid grid-cols-3 gap-1">
           {posts.items.map((post) => (
             <li key={post.id}>
-              <Link href={`/post/${post.id}`} aria-label={post.caption ? `Open post: ${post.caption.slice(0, 60)}` : "Open post"}>
+              <Link href={`/post/${post.id}`} aria-label={post.caption ? `Open post: ${post.caption.slice(0, 60)}` : "Open Gii"}>
                 <img src={post.imageUrl} alt="" loading="lazy" className="aspect-square w-full bg-background object-cover" />
               </Link>
             </li>

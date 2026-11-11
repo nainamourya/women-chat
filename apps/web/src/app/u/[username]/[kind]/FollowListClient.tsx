@@ -25,7 +25,7 @@ export function FollowListClient({ username, kind }: { username: string; kind: "
       {list.status === "loading" && <LoadingRows label="Loading" />}
       {list.status === "error" && list.error &&
         (list.error.status === 404 ? (
-          <EmptyState title="Member not found" action={{ href: "/discover", label: "Find people" }} />
+          <EmptyState title="Member not found" action={{ href: "/discover", label: "Search for women" }} />
         ) : (
           <GateNotice error={list.error} onResolved={list.reload} onRetry={list.reload} />
         ))}

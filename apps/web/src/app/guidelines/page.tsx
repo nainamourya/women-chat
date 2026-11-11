@@ -39,8 +39,8 @@ export default function GuidelinesPage() {
 
       <LegalSection title="Keep it appropriate">
         <LegalList>
-          <li>No nudity, sexual behaviour or sexually explicit talk on camera, in photos or captions, or in comments and messages.</li>
-          <li>Only post photos you have the right to share. Do not post photos or personal details of other people without their consent.</li>
+          <li>No nudity, sexual behaviour or sexually explicit talk on camera, in photos or captions, or in replies and messages.</li>
+          <li>Only share photos (Giis) you have the right to share. Do not share photos or personal details of other people without their consent.</li>
           <li>No illegal content or activity.</li>
           <li>No spam, advertising, scams or asking people for money.</li>
         </LegalList>
@@ -65,7 +65,7 @@ export default function GuidelinesPage() {
         <p>
           You can end a call or chat, move on with &ldquo;Not for me&rdquo;, remove someone from your circle, block
           them, or report them. Blocking someone removes you from each other&apos;s circles, and they can no
-          longer see your profile or posts, add you or message you. You can report a member or a single post. Reports can
+          longer see your profile or Giis, add you or message you. You can report a member or a single Gii. Reports can
           be about harassment, sexual or inappropriate behaviour, someone who does not seem eligible, a fake
           profile, spam or scams, threatening or unsafe behaviour, or something else. You can add a
           description.

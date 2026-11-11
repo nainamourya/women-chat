@@ -22,9 +22,9 @@ export default function manifest(): MetadataRoute.Manifest {
       { src: "/icons/maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
     ],
     shortcuts: [
-      { name: "New post", url: "/post/new", icons: [{ src: "/icons/icon-192.png", sizes: "192x192" }] },
-      { name: "Messages", url: "/messages", icons: [{ src: "/icons/icon-192.png", sizes: "192x192" }] },
-      { name: "Find someone", url: "/match", icons: [{ src: "/icons/icon-192.png", sizes: "192x192" }] },
+      { name: "Share a Gii", url: "/post/new", icons: [{ src: "/icons/icon-192.png", sizes: "192x192" }] },
+      { name: "Chats", url: "/messages", icons: [{ src: "/icons/icon-192.png", sizes: "192x192" }] },
+      { name: "Talk", url: "/match", icons: [{ src: "/icons/icon-192.png", sizes: "192x192" }] },
     ],
   };
 }

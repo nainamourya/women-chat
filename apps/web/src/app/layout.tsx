@@ -53,7 +53,7 @@ export const metadata: Metadata = {
     template: "%s — GiiGirl",
   },
   description:
-    "GiiGirl is a social app only for women (18+). Share posts, make friends, message privately or video chat one-to-one. Every member is reviewed by a real person — no bots, no men, not a dating app.",
+    "GiiGirl is a social app only for women (18+). Share Giis (photo moments), make friends, message privately or video chat one-to-one. Every member is reviewed by a real person — no bots, no men, not a dating app.",
   keywords: [
     "women only social app",
     "women only chat app",
